@@ -207,16 +207,6 @@ class Response:
     def __repr__(self) -> str:
         return f"<Response [{self.status_code}]>"
 
-    def __getstate__(self) -> dict[str, Any]:
-        return {
-            name: value
-            for name, value in self.__dict__.items()
-            if name not in ["stream", "is_closed"]
-        }
-
-    def __setstate__(self, state: dict[str, Any]) -> None:
-        pass
-
     def read(self) -> bytes:
         with self.stream as stream:
             self._content = b"".join(stream.render())

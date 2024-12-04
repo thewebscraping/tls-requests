@@ -94,14 +94,13 @@ class TLSLibrary:
         return glob.glob(os.path.join(BIN_DIR, r"*"))
 
     @classmethod
-    def download(cls) -> str:
+    def download(cls, version: str = None) -> str:
         try:
             download_url = None
-            for download_url in cls.fetch_api():
+            for download_url in cls.fetch_api(version):
                 if PATTERN_RE.search(download_url):
                     break
 
-            print(download_url)
             if download_url:
                 destination = os.path.join(BIN_DIR, download_url.split("/")[-1])
                 with requests.get(download_url, stream=True) as response:

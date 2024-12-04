@@ -2,6 +2,7 @@ TLS-Client Documentation
 ========================
 
 **Acknowledgment**
+
 Special thanks to [`bogdanfinn`](https://github.com/bogdanfinn/tls-client). For more details, visit the [GitHub repository](https://github.com/bogdanfinn/tls-client) or explore the [documentation](https://bogdanfinn.gitbook.io/open-source-oasis).
 
 ## Wrapper TLS Client
@@ -14,8 +15,6 @@ The TLSClient class is designed to be used as a singleton-like interface. Upon f
 >>> from tls_requests import TLSClient
 >>> TLSClient.initialize()
 ```
-
-![load_library.png](../static/load_library.png)
 
 !!! note
     The first time you initialize the TLSClient class, it will automatically find and load the appropriate library for your machine.

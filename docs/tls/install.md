@@ -1,23 +1,31 @@
 ## Auto Download
 
-No additional steps are required! Simply use the Python syntax below, and the library will automatically detect and download the version compatible with your operating system by fetching it from the GitHub repository.
+This approach simplifies usage as it automatically detects your OS and downloads the appropriate version of the library. To use it:
 
 #### Reference: [GitHub Releases - TLS Client](https://github.com/bogdanfinn/tls-client/releases/)
 
-The downloaded library files are stored in the `tls_requests/bin` directory.
 
 ```pycon
->>> from src import tls_requests
+>>> import tls_requests
 >>> r = tls_requests.get('https://httpbin.org/get')
 ```
 
+!!! note:
+    The library takes care of downloading necessary files and stores them in the `tls_requests/bin` directory.
+
 ## Manual Download
 
-For manual installation, you can download the library using the following script:
+If you want more control, such as selecting a specific version of the library, you can use the manual method:
 
-```python
-from tls_requests.models.libraries import TLSLibrary
-
-TLSLibrary.load()
-# OR: TLSLibrary.download()
+```pycon
+>>> from tls_requests.models.libraries import TLSLibrary
+>>> TLSLibrary.download('1.7.10')
 ```
+
+This method is useful if you need to ensure compatibility with specific library versions.
+
+### Notes
+
+1.  **Dependencies**: Ensure Python is installed and configured correctly in your environment.
+2.  **Custom Directory**: If needed, the library’s downloaded binaries can be relocated manually to suit specific project structures.
+3.  **Reference**: [TLS Client GitHub Releases](https://github.com/bogdanfinn/tls-client/releases/) provides details about available versions and updates.
