@@ -237,7 +237,7 @@ class Response:
     ) -> "Response":
         def _parse_response_body(value: Optional[str]) -> bytes:
             if value:
-                if is_byte_response:
+                if is_byte_response and response.status > 0:
                     try:
                         value = b64decode(value.split(",")[-1])
                         return value
