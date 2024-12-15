@@ -3,5 +3,5 @@ __description__ = "A powerful and lightweight Python library for making secure a
 __url__ = "https://github.com/thewebscraping/tls-requests"
 __author__ = "Tu Pham"
 __author_email__ = "thetwofarm@gmail.com"
-__version__ = "1.0.8"
+__version__ = "1.0.9"
 __license__ = "MIT"
