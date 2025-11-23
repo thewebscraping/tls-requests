@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import copy
-from abc import ABC
 from email.message import Message
 from http import cookiejar as cookielib
 from http.cookiejar import Cookie
@@ -11,8 +10,8 @@ from http.cookies import Morsel
 from typing import TYPE_CHECKING, Iterator, MutableMapping, Optional
 from urllib.parse import urlparse, urlunparse
 
-from tls_requests.exceptions import CookieConflictError
-from tls_requests.types import CookieTypes
+from ..exceptions import CookieConflictError, CookieError
+from ..types import CookieTypes
 
 if TYPE_CHECKING:
     from .request import Request
@@ -137,10 +136,8 @@ class RequestsCookieJar(cookielib.CookieJar, MutableMapping):
         """
         # support client code that unsets cookies by assignment of a None value:
         if value is None:
-            remove_cookie_by_name(
-                self, name, domain=kwargs.get("domain"), path=kwargs.get("path")
-            )
-            return
+            remove_cookie_by_name(self, name, domain=kwargs.get("domain"), path=kwargs.get("path"))
+            return None
 
         if isinstance(value, Morsel):
             c = morsel_to_cookie(value)
@@ -239,9 +236,7 @@ class RequestsCookieJar(cookielib.CookieJar, MutableMapping):
         """
         dictionary = {}
         for cookie in iter(self):
-            if (domain is None or cookie.domain == domain) and (
-                path is None or cookie.path == path
-            ):
+            if (domain is None or cookie.domain == domain) and (path is None or cookie.path == path):
                 dictionary[cookie.name] = cookie.value
         return dictionary
 
@@ -274,13 +269,9 @@ class RequestsCookieJar(cookielib.CookieJar, MutableMapping):
         remove_cookie_by_name(self, name)
 
     def set_cookie(self, cookie, *args, **kwargs):
-        if (
-            hasattr(cookie.value, "startswith")
-            and cookie.value.startswith('"')
-            and cookie.value.endswith('"')
-        ):
+        if hasattr(cookie.value, "startswith") and cookie.value.startswith('"') and cookie.value.endswith('"'):
             cookie.value = cookie.value.replace('\\"', "")
-        return super().set_cookie(cookie, *args, **kwargs)
+        return super().set_cookie(cookie, *args, **kwargs)  # type: ignore
 
     def update(self, other):  # noqa
         """Updates this jar with cookies from another CookieJar or dict-like"""
@@ -329,9 +320,7 @@ class RequestsCookieJar(cookielib.CookieJar, MutableMapping):
                     if path is None or cookie.path == path:
                         if toReturn is not None:
                             # if there are multiple cookies that meet passed in criteria
-                            raise CookieConflictError(
-                                f"There are multiple cookies with name, {name!r}"
-                            )
+                            raise CookieConflictError(f"There are multiple cookies with name, {name!r}")
                         # we will eventually return this as long as no cookie conflict
                         toReturn = cookie.value
 
@@ -350,6 +339,8 @@ class RequestsCookieJar(cookielib.CookieJar, MutableMapping):
         """Unlike a normal CookieJar, this class is pickleable."""
         self.__dict__.update(state)
         if "_cookies_lock" not in self.__dict__:
+            import threading
+
             self._cookies_lock = threading.RLock()
 
     def copy(self):
@@ -446,9 +437,7 @@ def create_cookie(name, value, **kwargs):
 
     badargs = set(kwargs) - set(result)
     if badargs:
-        raise TypeError(
-            f"create_cookie() got unexpected keyword arguments: {list(badargs)}"
-        )
+        raise CookieError(f"create_cookie() got unexpected keyword arguments: {list(badargs)}")
 
     result.update(kwargs)
     result["port_specified"] = bool(result["port"])
@@ -467,7 +456,7 @@ def morsel_to_cookie(morsel):
         try:
             expires = int(time.time() + int(morsel["max-age"]))
         except ValueError:
-            raise TypeError(f"max-age: {morsel['max-age']} must be integer")
+            raise CookieError(f"max-age: {morsel['max-age']} must be integer")
     elif morsel["expires"]:
         time_template = "%a, %d-%b-%Y %H:%M:%S GMT"
         expires = calendar.timegm(time.strptime(morsel["expires"], time_template))
@@ -531,7 +520,7 @@ def merge_cookies(cookiejar, cookies):
     return cookiejar
 
 
-class Cookies(MutableMapping[str, str], ABC):
+class Cookies(MutableMapping[str, str]):
     def __init__(self, cookies: CookieTypes = None) -> None:
         self.cookiejar = self._prepare_cookiejar(cookies)
 
@@ -561,10 +550,8 @@ class Cookies(MutableMapping[str, str], ABC):
 
     def set(self, name, value, **kwargs) -> Optional[Cookie]:
         if value is None:
-            remove_cookie_by_name(
-                self, name, domain=kwargs.get("domain"), path=kwargs.get("path")
-            )
-            return
+            remove_cookie_by_name(self, name, domain=kwargs.get("domain"), path=kwargs.get("path"))
+            return None
 
         if isinstance(value, Morsel):
             cookie = morsel_to_cookie(value)
@@ -574,7 +561,7 @@ class Cookies(MutableMapping[str, str], ABC):
         self.cookiejar.set_cookie(cookie)
         return cookie
 
-    def get(self, name, default=None, domain="", path="/") -> str:
+    def get(self, name, default=None, domain=None, path=None) -> str:
         return self.cookiejar.get(name, default, domain, path)
 
     def delete(self, name: str, domain: str = None, path: str = None) -> None:

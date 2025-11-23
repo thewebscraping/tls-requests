@@ -1,10 +1,10 @@
-from abc import ABC
 from collections.abc import Mapping, MutableMapping
 from enum import Enum
 from typing import Any, ItemsView, KeysView, List, Literal, Tuple, ValuesView
 
-from tls_requests.types import ByteOrStr, HeaderTypes
-from tls_requests.utils import to_str
+from ..exceptions import HeaderError
+from ..types import ByteOrStr, HeaderTypes
+from ..utils import to_str
 
 __all__ = ["Headers"]
 
@@ -23,16 +23,9 @@ class HeaderAlias(str, Enum):
         return False
 
 
-class Headers(MutableMapping, ABC):
-    def __init__(
-        self,
-        headers: HeaderTypes = None,
-        *,
-        alias: HeaderAliasTypes = HeaderAlias.LOWER
-    ):
-        self.alias = (
-            alias if alias in HeaderAlias._value2member_map_ else HeaderAlias.LOWER
-        )
+class Headers(MutableMapping):
+    def __init__(self, headers: HeaderTypes = None, *, alias: HeaderAliasTypes = HeaderAlias.LOWER):
+        self.alias = alias if alias in HeaderAlias._value2member_map_ else HeaderAlias.LOWER
         self._items = self._prepare_items(headers)
 
     def get(self, key: str, default: Any = None) -> Any:
@@ -76,7 +69,7 @@ class Headers(MutableMapping, ABC):
                 return items
             except IndexError:
                 pass
-        raise TypeError
+        raise HeaderError
 
     def _normalize_key(self, key: ByteOrStr) -> str:
         key = to_str(key, encoding="ascii")
@@ -90,13 +83,13 @@ class Headers(MutableMapping, ABC):
 
     def _normalize_value(self, value) -> List[str]:
         if isinstance(value, dict):
-            raise TypeError
+            raise HeaderError
 
         if isinstance(value, (list, tuple, set)):
             items = []
             for item in value:
                 if isinstance(item, dict):
-                    raise TypeError
+                    raise HeaderError
                 items.append(to_str(item))
             return items
 
@@ -110,8 +103,7 @@ class Headers(MutableMapping, ABC):
         key, value = self._normalize(key, value)
         for idx, (k, _) in enumerate(self._items):
             if k == key:
-                values = [v for v in value if v not in self._items[idx][1]]
-                self._items[idx][1].extend(values)
+                self._items[idx] = (k, value)
                 found = True
                 break
 
@@ -151,9 +143,7 @@ class Headers(MutableMapping, ABC):
         return items == other
 
     def __repr__(self):
-        SECURE = [
-            self._normalize_key(key) for key in ["Authorization", "Proxy-Authorization"]
-        ]
+        SECURE = [self._normalize_key(key) for key in ["Authorization", "Proxy-Authorization"]]
         return "<%s: %s>" % (
             self.__class__.__name__,
             {k: "[secure]" if k in SECURE else ",".join(v) for k, v in self._items},

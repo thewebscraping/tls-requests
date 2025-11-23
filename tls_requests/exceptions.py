@@ -6,23 +6,40 @@ if TYPE_CHECKING:
     pass
 
 __all__ = [
+    "AuthenticationError",
     "CookieConflictError",
     "HTTPError",
-    "URLError",
-    "RemoteProtocolError",
+    "HeaderError",
     "ProtocolError",
+    "RemoteProtocolError",
     "StreamConsumed",
     "StreamError",
-    "TooManyRedirects",
     "TLSError",
+    "RotatorError",
+    "TooManyRedirects",
+    "URLError",
 ]
 
 
 class HTTPError(Exception):
     """HTTP Error"""
 
-    def __init__(self, message: str) -> None:
+    def __init__(self, message: str, **kwargs) -> None:
         self.message = message
+        response = kwargs.pop("response", None)
+        self.response = response
+        self.request = kwargs.pop("request", None)
+        if response is not None and not self.request and hasattr(response, "request"):
+            self.request = self.response.request
+        super().__init__(message)
+
+
+class AuthenticationError(HTTPError):
+    """Authentication Error"""
+
+
+class HeaderError(HTTPError):
+    """Header Error"""
 
 
 class ProtocolError(HTTPError):
@@ -74,4 +91,8 @@ class StreamConsumed(StreamError):
 
 
 class StreamClosed(StreamError):
+    pass
+
+
+class RotatorError(HTTPError):
     pass

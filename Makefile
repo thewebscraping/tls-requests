@@ -2,9 +2,11 @@
 init-actions:
 	python -m pip install --upgrade pip
 	python -m pip install -r requirements-dev.txt
+	python -m autoflake --in-place --remove-all-unused-imports --ignore-init-module-imports .
 	python -m black tls_requests
 	python -m isort tls_requests
 	python -m flake8 tls_requests
+
 
 test:
 	tox -p

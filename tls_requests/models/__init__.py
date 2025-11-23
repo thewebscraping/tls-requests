@@ -6,6 +6,8 @@ from .headers import Headers
 from .libraries import TLSLibrary
 from .request import Request
 from .response import Response
+from .rotators import (BaseRotator, HeaderRotator, ProxyRotator,
+                       TLSIdentifierRotator)
 from .status_codes import StatusCodes
 from .tls import CustomTLSClientConfig, TLSClient, TLSConfig, TLSResponse
 from .urls import URL, Proxy, URLParams

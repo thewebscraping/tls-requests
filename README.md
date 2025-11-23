@@ -44,6 +44,31 @@ Start using TLS Requests with just a few lines of code:
 200
 ```
 
+Basic automatically rotates:
+
+```pycon
+>>> import tls_requests
+>>> proxy_list = [
+    "http://user1:pass1@proxy.example.com:8080",
+    "http://user2:pass2@proxy.example.com:8081",
+    "socks5://proxy.example.com:8082",
+    "proxy.example.com:8083",  #  (defaults to http)
+    "http://user:pass@proxy.example.com:8084|1.0|US",  #  http://user:pass@host:port|weight|region
+]
+>>> r = tls_requests.get(
+    "https://httpbin.org/get",
+    proxy=proxy,
+    headers=tls_requests.HeaderRotator(),
+    tls_identifier=tls_requests.TLSIdentifierRotator()
+)
+>>> r
+<Response [200 OK]>
+>>> r.status_code
+200
+>>> tls_requests.HeaderRotator(strategy = "round_robin")  # strategy: Literal["round_robin", "random", "weighted"]
+>>> tls_requests.Proxy("http://user1:pass1@proxy.example.com:8080", weight=0.1)  # default weight: 1.0
+```
+
 **Introduction**
 ----------------
 

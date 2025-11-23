@@ -1,12 +1,9 @@
 exclude: '^docs.sh/|scripts/'
 default_stages: [pre-commit]
 
-default_language_version:
-  python: python3.10
-
 repos:
   - repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v4.5.0
+    rev: v6.0.0
     hooks:
       - id: trailing-whitespace
       - id: end-of-file-fixer
@@ -20,14 +17,21 @@ repos:
       - id: check-docstring-first
       - id: detect-private-key
 
+  # run the autoflake.
+  - repo: https://github.com/PyCQA/autoflake
+    rev: v2.3.1
+    hooks:
+      - id: autoflake
+        args: [--remove-all-unused-imports, --in-place, --ignore-init-module-imports]
+
   # run the isort.
   - repo: https://github.com/PyCQA/isort
-    rev: 5.13.2
+    rev: 6.1.0
     hooks:
       - id: isort
 
   # run the flake8.
   - repo: https://github.com/PyCQA/flake8
-    rev: 7.0.0
+    rev: 7.3.0
     hooks:
       - id: flake8

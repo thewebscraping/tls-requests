@@ -4,15 +4,14 @@ from dataclasses import asdict, dataclass, field
 from dataclasses import fields as get_fields
 from typing import Any, List, Mapping, Optional, Set, TypeVar, Union
 
-from tls_requests.models.encoders import StreamEncoder
-from tls_requests.models.libraries import TLSLibrary
-from tls_requests.models.status_codes import StatusCodes
-from tls_requests.settings import (DEFAULT_HEADERS, DEFAULT_TIMEOUT,
-                                   DEFAULT_TLS_DEBUG, DEFAULT_TLS_HTTP2,
-                                   DEFAULT_TLS_IDENTIFIER)
-from tls_requests.types import (MethodTypes, TLSCookiesTypes,
-                                TLSIdentifierTypes, TLSSessionId, URLTypes)
-from tls_requests.utils import to_base64, to_bytes, to_json
+from ..settings import (DEFAULT_HEADERS, DEFAULT_TIMEOUT, DEFAULT_TLS_DEBUG,
+                        DEFAULT_TLS_HTTP2, DEFAULT_TLS_IDENTIFIER)
+from ..types import (MethodTypes, TLSCookiesTypes, TLSIdentifierTypes,
+                     TLSSessionId, URLTypes)
+from ..utils import to_base64, to_bytes, to_json
+from .encoders import StreamEncoder
+from .libraries import TLSLibrary
+from .status_codes import StatusCodes
 
 __all__ = [
     "TLSClient",
@@ -115,9 +114,7 @@ class TLSClient:
 
     @classmethod
     def get_cookies(cls, session_id: TLSSessionId, url: str) -> "TLSResponse":
-        response = cls._send(
-            cls._getCookiesFromSession, {"sessionId": session_id, "url": url}
-        )
+        response = cls._send(cls._getCookiesFromSession, {"sessionId": session_id, "url": url})
         return response
 
     @classmethod
@@ -179,16 +176,12 @@ class _BaseConfig:
 
     @classmethod
     def model_fields_set(cls) -> Set[str]:
-        return {
-            model_field.name
-            for model_field in get_fields(cls)
-            if not model_field.name.startswith("_")
-        }
+        return {model_field.name for model_field in get_fields(cls) if not model_field.name.startswith("_")}
 
     @classmethod
     def from_kwargs(cls, **kwargs: Any) -> T:
         model_fields_set = cls.model_fields_set()
-        return cls(**{k: v for k, v in kwargs.items() if k in model_fields_set and v})
+        return cls(**{k: v for k, v in kwargs.items() if k in model_fields_set and v})  # noqa
 
     def to_dict(self) -> dict:
         return {k: v for k, v in asdict(self).items() if not k.startswith("_")}
@@ -462,9 +455,7 @@ class TLSConfig(_BaseConfig):
             self.requestBody = None
 
         self.timeoutSeconds = (
-            int(self.timeoutSeconds)
-            if isinstance(self.timeoutSeconds, (float, int))
-            else DEFAULT_TIMEOUT
+            int(self.timeoutSeconds) if isinstance(self.timeoutSeconds, (float, int)) else DEFAULT_TIMEOUT
         )
         return asdict(self)
 
@@ -509,7 +500,7 @@ class TLSConfig(_BaseConfig):
             if kwargs.get(k) is not None:
                 current_kwargs[k] = kwargs[k]
 
-        return self.__class__(**current_kwargs)
+        return self.__class__(**current_kwargs)  # noqa
 
     @classmethod
     def from_kwargs(
@@ -542,11 +533,7 @@ class TLSConfig(_BaseConfig):
                 isByteRequest=is_byte_request,
                 proxyUrl=proxy,
                 forceHttp1=bool(not http2),
-                timeoutSeconds=(
-                    int(timeout)
-                    if isinstance(timeout, (float, int))
-                    else DEFAULT_TIMEOUT
-                ),
+                timeoutSeconds=(int(timeout) if isinstance(timeout, (float, int)) else DEFAULT_TIMEOUT),
                 insecureSkipVerify=not verify,
                 tlsClientIdentifier=tls_identifier,
                 withDebug=tls_debug,

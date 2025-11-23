@@ -2,6 +2,13 @@
 **A powerful and lightweight Python library for making secure and reliable HTTP/TLS fingerprint requests.**
 
 * * *
+## Table of Contents
+
+- [Installation](#installation)
+- [Quick Start](#quick-start)
+- [Key Benefits](#key-benefits)
+- [Cookie Management](#cookie-management)
+- [Documentation](#documentation)
 
 **Installation**
 ----------------
@@ -19,6 +26,17 @@ pip install wrapper-tls-requests
 ```shell
 pip install git+https://github.com/thewebscraping/tls-requests.git
 ```
+
+> **Note**: After installation you can update the TLS library manually using:
+> ```bash
+> python -m tls_requests.models.libraries
+> ```
+>
+> **Logging**: The library now uses the standard `logging` module. Configure it in your application, e.g.:
+> ```python
+> import logging
+> logging.basicConfig(level=logging.INFO)
+> ```
 
 ### Quick Start
 

@@ -5,9 +5,9 @@ from mimetypes import guess_type
 from typing import Any, AsyncIterator, Dict, Iterator, Mapping, Tuple, TypeVar
 from urllib.parse import urlencode
 
-from tls_requests.types import (BufferTypes, ByteOrStr, RequestData,
-                                RequestFiles, RequestFileValue, RequestJson)
-from tls_requests.utils import to_bytes, to_str
+from ..types import (BufferTypes, ByteOrStr, RequestData, RequestFiles,
+                     RequestFileValue, RequestJson)
+from ..utils import to_bytes, to_str
 
 __all__ = [
     "JsonEncoder",
@@ -64,9 +64,7 @@ class BaseField:
 
     def render_headers(self) -> bytes:
         headers = self.get_headers()
-        return (
-            b"\r\n".join(b"%s: %s" % (k, v) for k, v in headers.items()) + b"\r\n\r\n"
-        )
+        return b"\r\n".join(b"%s: %s" % (k, v) for k, v in headers.items()) + b"\r\n\r\n"
 
     def render_data(self, chunk_size: int = 65_536) -> Iterator[bytes]:
         yield b""
@@ -80,9 +78,7 @@ class BaseField:
         content_type = getattr(self, "content_type", None)
         if content_type:
             self._headers[b"Content-Type"] = (
-                self.content_type.encode("ascii")
-                if isinstance(content_type, str)
-                else content_type
+                self.content_type.encode("ascii") if isinstance(content_type, str) else content_type
             )
         return self._headers
 
@@ -194,9 +190,7 @@ class MultipartEncoder(BaseEncoder):
         self._chunk_size = chunk_size
         self._is_closed = False
         self.fields = self._prepare_fields(data, files)
-        self.boundary = (
-            boundary if boundary and isinstance(boundary, bytes) else get_boundary()
-        )
+        self.boundary = boundary if boundary and isinstance(boundary, bytes) else get_boundary()
 
     @property
     def headers(self) -> dict:

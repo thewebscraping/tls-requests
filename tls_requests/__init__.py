@@ -33,9 +33,11 @@ __all__ = [
     "patch",
     "post",
     "put",
-    "request",
 ]
 
+from .api import request
+
+__all__ += ["request"]
 
 __locals = locals()
 for __name in __all__:

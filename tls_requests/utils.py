@@ -5,8 +5,8 @@ import importlib
 import logging
 from typing import Any, AnyStr, Union
 
-FORMAT = "%(levelname)s:%(asctime)s:%(name)s:%(funcName)s:%(lineno)d >>> %(message)s"
-DATE_FORMAT = "%Y-%m-%dT%H:%M:%SZ"
+FORMAT = "[%(asctime)s] %(levelname)-8s %(name)s:%(funcName)s:%(lineno)d - %(message)s"
+DATE_FORMAT = "%Y-%m-%d %H:%M:%S"
 
 
 def import_module(name: Union[str, list[str]]):

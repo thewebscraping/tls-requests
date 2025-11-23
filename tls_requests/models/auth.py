@@ -1,7 +1,8 @@
 from base64 import b64encode
 from typing import Any, Union
 
-from tls_requests.models.request import Request
+from ..exceptions import AuthenticationError
+from .request import Request
 
 
 class Auth:
@@ -22,9 +23,7 @@ class BasicAuth(Auth):
         return self._build_auth_headers(request)
 
     def _build_auth_headers(self, request: Request):
-        auth_token = b64encode(
-            b":".join([self._encode(self.username), self._encode(self.password)])
-        ).decode()
+        auth_token = b64encode(b":".join([self._encode(self.username), self._encode(self.password)])).decode()
         request.headers["Authorization"] = "Basic %s" % auth_token
 
     def _encode(self, value: Union[str, bytes]) -> bytes:
@@ -32,6 +31,6 @@ class BasicAuth(Auth):
             value = value.encode("latin1")
 
         if not isinstance(value, bytes):
-            raise TypeError("`username` or `password` parameter must be str or byte.")
+            raise AuthenticationError("`username` or `password` parameter must be str or byte.")
 
         return value

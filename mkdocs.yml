@@ -30,6 +30,7 @@ nav:
         - Authentication: 'advanced/authentication.md'
         - Hooks: 'advanced/hooks.md'
         - Proxies: 'advanced/proxies.md'
+        - Rotators: 'advanced/rotators.md'
     - TLS Client:
         - Install: 'tls/install.md'
         - Wrapper TLS Client: 'tls/index.md'
@@ -42,5 +43,5 @@ markdown_extensions:
       css_class: highlight
   - mkautodoc
 
-extra_css:
-    - css/custom.css
+# extra_css:  # custom CSS removed because file is missing
+#     - css/custom.css

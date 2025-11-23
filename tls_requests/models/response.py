@@ -4,16 +4,16 @@ import datetime
 from email.message import Message
 from typing import Any, Callable, Optional, TypeVar, Union
 
-from tls_requests.exceptions import Base64DecodeError, HTTPError
-from tls_requests.models.cookies import Cookies
-from tls_requests.models.encoders import StreamEncoder
-from tls_requests.models.headers import Headers
-from tls_requests.models.request import Request
-from tls_requests.models.status_codes import StatusCodes
-from tls_requests.models.tls import TLSResponse
-from tls_requests.settings import CHUNK_SIZE
-from tls_requests.types import CookieTypes, HeaderTypes, ResponseHistory
-from tls_requests.utils import b64decode, chardet, to_json
+from ..exceptions import Base64DecodeError, HTTPError
+from ..settings import CHUNK_SIZE
+from ..types import CookieTypes, HeaderTypes, ResponseHistory
+from ..utils import b64decode, chardet, to_json
+from .cookies import Cookies
+from .encoders import StreamEncoder
+from .headers import Headers
+from .request import Request
+from .status_codes import StatusCodes
+from .tls import TLSResponse
 
 __all__ = ["Response"]
 
@@ -53,7 +53,6 @@ class Response:
         self._is_closed = False
         self._next: Optional[Request] = None
         self.headers = Headers(headers)
-        self.stream = None
         self.status_code = status_code
         self.history = history if isinstance(history, list) else []
         self.default_encoding = default_encoding
@@ -77,9 +76,7 @@ class Response:
     @property
     def request(self) -> Request:
         if self._request is None:
-            raise RuntimeError(
-                "The request instance has not been set on this response."
-            )
+            raise RuntimeError("The request instance has not been set on this response.")
         return self._request
 
     @request.setter
@@ -101,9 +98,14 @@ class Response:
 
     @property
     def cookies(self) -> Cookies:
-        if self._cookies is None:
-            self._cookies = Cookies()
-            self._cookies.extract_cookies(self, self.request)
+        if self._request:
+            # Fix missing domain in cookies by backfilling from request URL
+            # Ref: https://github.com/thewebscraping/tls-requests/issues/47
+            for cookie in self._cookies.cookiejar:
+                if not cookie.domain:
+                    cookie.domain = self._request.url.host
+                    cookie.domain_specified = False
+                    cookie.domain_initial_dot = False
         return self._cookies
 
     @property
@@ -135,6 +137,7 @@ class Response:
             msg = Message()
             msg["content-type"] = self.headers["Content-Type"]
             return msg.get_content_charset(failobj=None)
+        return None
 
     @property
     def encoding(self) -> str:
@@ -191,13 +194,10 @@ class Response:
             raise HTTPError(
                 http_error_msg.format(
                     self.status_code,
-                    (
-                        self.reason
-                        if self.status_code < 100
-                        else StatusCodes.get_reason(self.status_code)
-                    ),
+                    (self.reason if self.status_code < 100 else StatusCodes.get_reason(self.status_code)),
                     self.url,
-                )
+                ),
+                response=self,
             )
 
         return self
@@ -228,13 +228,15 @@ class Response:
             self._is_stream_consumed = True
             self.stream.close()
 
+        # Fix pickle dump
+        # Ref: https://github.com/thewebscraping/tls-requests/issues/35
+        self.stream = None
+
     async def aclose(self) -> None:
         return self.close()
 
     @classmethod
-    def from_tls_response(
-        cls, response: TLSResponse, is_byte_response: bool = False
-    ) -> "Response":
+    def from_tls_response(cls, response: TLSResponse, is_byte_response: bool = False) -> "Response":
         def _parse_response_body(value: Optional[str]) -> bytes:
             if value:
                 if is_byte_response and response.status > 0:
@@ -242,9 +244,7 @@ class Response:
                         value = b64decode(value.split(",")[-1])
                         return value
                     except (binascii.Error, AssertionError):
-                        raise Base64DecodeError(
-                            "Couldn't decode the base64 string into bytes."
-                        )
+                        raise Base64DecodeError("Couldn't decode the base64 string into bytes.")
                 return value.encode("utf-8")
             return b""
 

@@ -4,3 +4,47 @@ build-backend = 'setuptools.build_meta'
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
+
+[tool.black]
+line-length = 120
+target-version = ['py38', 'py39', 'py310', 'py311', 'py312']
+unstable = true
+exclude = '''
+/(
+    \.git
+  | \.hg
+  | \.mypy_cache
+  | \.tox
+  | \.venv
+  | _build
+  | buck-out
+  | build
+  | dist
+)/
+'''
+
+
+[tool.flake8]
+max-line-length = 120
+max-complexity = 10
+extend-ignore = [
+    "E203",  # Whitespace before ':', which black handles differently than flake8.
+    "W503",  # Line break before binary operator, black's preferred style.
+]
+
+# Comma-separated list of directories to exclude from linting.
+exclude = [
+    ".git",
+    "__pycache__",
+    "docs/source/conf.py",
+    "old",
+    "build",
+    "dist",
+    ".venv",
+]
+
+# Per-file ignores are very useful for specific cases.
+# For example, __init__.py files often have unused imports on purpose.
+per-file-ignores = [
+    "__init__.py:F401", # Ignore "unused import" in __init__.py files
+]

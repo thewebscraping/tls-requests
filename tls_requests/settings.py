@@ -9,7 +9,7 @@ DEFAULT_FOLLOW_REDIRECTS = True
 DEFAULT_TLS_DEBUG = False
 DEFAULT_TLS_INSECURE_SKIP_VERIFY = False
 DEFAULT_TLS_HTTP2 = "auto"
-DEFAULT_TLS_IDENTIFIER = "chrome_120"
+DEFAULT_TLS_IDENTIFIER = "chrome_133"
 DEFAULT_HEADERS = {
     "accept": "*/*",
     "connection": "keep-alive",

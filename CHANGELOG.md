@@ -1,5 +1,30 @@
 Release History
-===============
+================
+
+1.1.7 (2025-11-23)
+------------------
+**Improvements:**
+
+- Optimized logging.
+- Fixed cookie response handling.
+
+1.1.6 (2025-10-14)
+------------------
+**Enhancements:**
+This pull request introduces two major enhancements that significantly improve the library's anti‑detection capabilities and overall robustness:
+
+**A Smart Rotator System**
+- Automatically rotates proxies, headers, and TLS identifiers to mimic authentic traffic.
+- Introduced three new rotator classes: `ProxyRotator`, `HeaderRotator`, and `TLSIdentifierRotator`.
+- Client and AsyncClient now enable header and TLS identifier rotation by default, using built‑in realistic templates.
+- Unified parameters accept a single value, a list, or a pre‑configured Rotator instance.
+- Proxy feedback loop (`mark_result`/`amark_result`) optimizes weighted rotation strategy.
+
+**Robust Library Management**
+- Dependency‑free, self‑managing mechanism for the core `tls-client` C library lifecycle.
+- Removed `requests` and `tqdm`; now uses built‑in `urllib` and [json](cci:1://file:///Users/twofarm/Desktop/works/tls_requests/tls_requests/models/response.py:204:4-205:43).
+- TLSLibrary is version‑aware, automatically downloading the correct version from GitHub when needed.
+- Automatic cleanup of old library files after successful updates.
 
 1.0.7 (2024-12-14)
 -------------------
