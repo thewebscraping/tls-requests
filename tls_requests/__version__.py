@@ -5,5 +5,5 @@ __description__ = (
 __url__ = "https://github.com/thewebscraping/tls-requests"
 __author__ = "Tu Pham"
 __author_email__ = "thetwofarm@gmail.com"
-__version__ = "1.1.6"
+__version__ = "1.1.7"
 __license__ = "MIT"

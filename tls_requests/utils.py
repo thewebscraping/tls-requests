@@ -5,8 +5,8 @@ import importlib
 import logging
 from typing import Any, AnyStr, Union
 
-FORMAT = "%(levelname)s:%(asctime)s:%(name)s:%(funcName)s:%(lineno)d >>> %(message)s"
-DATE_FORMAT = "%Y-%m-%dT%H:%M:%SZ"
+FORMAT = "[%(asctime)s] %(levelname)-8s %(name)s:%(funcName)s:%(lineno)d - %(message)s"
+DATE_FORMAT = "%Y-%m-%d %H:%M:%S"
 
 
 def import_module(name: Union[str, list[str]]):
@@ -30,10 +30,18 @@ else:
     jsonlib = json
 
 
-def get_logger(name: str = "TLSRequests", level: int | str = logging.INFO) -> logging.Logger:
-    logging.basicConfig(format=FORMAT, datefmt=DATE_FORMAT, level=level)
+def get_logger(
+    name: str = "TLSRequests", level: int | str = logging.INFO
+) -> logging.Logger:
     logger = logging.getLogger(name)
     logger.setLevel(level)
+
+    if not logger.handlers:
+        handler = logging.StreamHandler()
+        formatter = logging.Formatter(FORMAT, datefmt=DATE_FORMAT)
+        handler.setFormatter(formatter)
+        logger.addHandler(handler)
+
     return logger
 
 

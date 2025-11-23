@@ -43,5 +43,5 @@ markdown_extensions:
       css_class: highlight
   - mkautodoc
 
-extra_css:
-    - css/custom.css
+# extra_css:  # custom CSS removed because file is missing
+#     - css/custom.css

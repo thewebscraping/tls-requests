@@ -561,7 +561,7 @@ class Cookies(MutableMapping[str, str]):
         self.cookiejar.set_cookie(cookie)
         return cookie
 
-    def get(self, name, default=None, domain="", path="/") -> str:
+    def get(self, name, default=None, domain=None, path=None) -> str:
         return self.cookiejar.get(name, default, domain, path)
 
     def delete(self, name: str, domain: str = None, path: str = None) -> None:

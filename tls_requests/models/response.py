@@ -98,9 +98,14 @@ class Response:
 
     @property
     def cookies(self) -> Cookies:
-        if self._cookies is None:
-            self._cookies = Cookies()
-            self._cookies.extract_cookies(self, self.request)
+        if self._request:
+            # Fix missing domain in cookies by backfilling from request URL
+            # Ref: https://github.com/thewebscraping/tls-requests/issues/47
+            for cookie in self._cookies.cookiejar:
+                if not cookie.domain:
+                    cookie.domain = self._request.url.host
+                    cookie.domain_specified = False
+                    cookie.domain_initial_dot = False
         return self._cookies
 
     @property

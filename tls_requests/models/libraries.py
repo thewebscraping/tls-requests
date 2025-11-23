@@ -12,6 +12,10 @@ from pathlib import Path
 from platform import machine
 from typing import List, Optional, Tuple
 
+from tls_requests.utils import get_logger
+
+logger = get_logger("TLSLibrary")
+
 __all__ = ["TLSLibrary"]
 
 LATEST_VERSION_TAG_NAME = "v1.11.2"
@@ -60,7 +64,6 @@ elif PLATFORM == "darwin":
 
 PATTERN_RE = re.compile(r"%s-%s.*%s" % (PLATFORM, MACHINE, FILE_EXT), re.I)
 PATTERN_UBUNTU_RE = re.compile(r"%s-%s.*%s" % ("ubuntu", MACHINE, FILE_EXT), re.I)
-
 TLS_LIBRARY_PATH = os.getenv("TLS_LIBRARY_PATH")
 
 
@@ -131,6 +134,7 @@ class TLSLibrary:
     """
 
     _PATH: str = None
+    _LIBRARY: Optional[ctypes.CDLL] = None
     _STATIC_API_DATA = {
         "name": "v1.11.2",
         "tag_name": "v1.11.2",
@@ -250,9 +254,9 @@ class TLSLibrary:
             if is_remove:
                 try:
                     os.remove(file_path)
-                    print(f"Removed old library file: {file_path}")
+                    logger.info(f"Removed old library file: {file_path}")
                 except OSError as e:
-                    print(f"Error removing old library file {file_path}: {e}")
+                    logger.error(f"Error removing old library file {file_path}: {e}")
 
     @classmethod
     def fetch_api(cls, version: str = None, retries: int = 3):
@@ -280,7 +284,7 @@ class TLSLibrary:
                         _find_release(json.loads(content))
                         break
             except Exception as ex:
-                print("Unable to fetch GitHub API: %s" % ex)
+                logger.error("Unable to fetch GitHub API: %s" % ex)
 
         if not asset_urls and not ubuntu_urls:
             _find_release([cls._STATIC_API_DATA])
@@ -303,9 +307,22 @@ class TLSLibrary:
         return [src for src in glob.glob(os.path.join(BIN_DIR, r"*")) if src.lower().endswith(("so", "dll", "dylib"))]
 
     @classmethod
+    def update(cls):
+        """Forces a download of the latest library version."""
+        logger.info(f"Updating TLS library to version {LATEST_VERSION_TAG_NAME}...")
+        downloaded_fp = cls.download(version=LATEST_VERSION_TAG_NAME)
+        if downloaded_fp:
+            cls.cleanup_files(keep_file=downloaded_fp)
+            logger.info("Update complete.")
+            return downloaded_fp
+        logger.error("Update failed.")
+
+    upgrade = update
+
+    @classmethod
     def download(cls, version: str = None) -> str:
         try:
-            print(
+            logger.info(
                 "System Info - Platform: %s, Machine: %s, File Ext : %s."
                 % (
                     PLATFORM,
@@ -319,7 +336,7 @@ class TLSLibrary:
                     download_url = url
                     break
 
-            print("Library Download URL: %s" % download_url)
+            logger.info("Library Download URL: %s" % download_url)
             if download_url:
                 destination_name = download_url.split("/")[-1]
                 destination = os.path.join(BIN_DIR, destination_name)
@@ -352,13 +369,12 @@ class TLSLibrary:
                                 sys.stdout.write(f"\rDownloading {destination_name}: [{bar}] {percent:.1f}%")
                                 sys.stdout.flush()
 
-                print()  # Newline after download completes
                 return destination
 
         except (urllib.error.URLError, urllib.error.HTTPError) as ex:
-            print("Unable to download file: %s" % ex)
+            logger.error("Unable to download file: %s" % ex)
         except Exception as e:
-            print("An unexpected error occurred during download: %s" % e)
+            logger.error("An unexpected error occurred during download: %s" % e)
 
     @classmethod
     def set_path(cls, fp: str):
@@ -370,22 +386,32 @@ class TLSLibrary:
         Loads the TLS library. It checks for the correct version, downloads it if
         the local version is outdated or missing, and then loads it into memory.
         """
+        target_version = cls._parse_version(LATEST_VERSION_TAG_NAME)
+
+        if cls._LIBRARY and cls._PATH:
+            cached_version = cls._parse_version_from_filename(cls._PATH)
+            if cached_version == target_version:
+                return cls._LIBRARY
 
         def _load_library(fp_):
             try:
                 lib = ctypes.cdll.LoadLibrary(fp_)
                 cls.set_path(fp_)
-                print(f"Successfully loaded TLS library: {fp_}")
+                cls._LIBRARY = lib
+                logger.info(f"Successfully loaded TLS library: {fp_}")
                 return lib
             except Exception as ex:
-                print(f"Unable to load TLS library '{fp_}', details: {ex}")
+                logger.error(f"Unable to load TLS library '{fp_}', details: {ex}")
                 try:
                     os.remove(fp_)
                 except (FileNotFoundError, PermissionError):
                     pass
 
-        target_version = cls._parse_version(LATEST_VERSION_TAG_NAME)
-        print(f"Required library version: {LATEST_VERSION_TAG_NAME}")
+        if TLS_LIBRARY_PATH:
+            logger.info(f"Loading TLS library from environment variable: {TLS_LIBRARY_PATH}")
+            return _load_library(TLS_LIBRARY_PATH)
+
+        logger.debug(f"Required library version: {LATEST_VERSION_TAG_NAME}")
         local_files = cls.find_all()
         newest_local_version = (0, 0, 0)
         newest_local_file = None
@@ -396,17 +422,21 @@ class TLSLibrary:
                 if file_version > newest_local_version:
                     newest_local_version = file_version
                     newest_local_file = file_path
-            print(
+            logger.debug(
                 f"Found newest local library: {newest_local_file} (version {'.'.join(map(str, newest_local_version))})"
             )
         else:
-            print("No local library found.")
+            logger.debug("No local library found.")
 
         if newest_local_version < target_version:
             if newest_local_file:
-                print(f"Local library is outdated. Upgrading to {LATEST_VERSION_TAG_NAME}...")
+                logger.warning(
+                    f"Local library is outdated (Found: {'.'.join(map(str, newest_local_version))}, "
+                    f"Required: {LATEST_VERSION_TAG_NAME}). "
+                    f"Auto-downloading... To manually upgrade, run: `python -m tls_requests.models.libraries`"
+                )
             else:
-                print(f"Downloading required library version {LATEST_VERSION_TAG_NAME}...")
+                logger.info(f"Downloading required library version {LATEST_VERSION_TAG_NAME}...")
 
             downloaded_fp = cls.download(version=LATEST_VERSION_TAG_NAME)
             if downloaded_fp:
@@ -414,6 +444,11 @@ class TLSLibrary:
                 library = _load_library(downloaded_fp)
                 if library:
                     return library
+
+            logger.error(
+                f"Failed to download the required TLS library {LATEST_VERSION_TAG_NAME}. "
+                "Please check your connection or download it manually from GitHub."
+            )
             raise OSError("Failed to download the required TLS library.")
 
         if newest_local_file:
@@ -423,3 +458,7 @@ class TLSLibrary:
                 return library
 
         raise OSError("Could not find or load a compatible TLS library.")
+
+
+if __name__ == "__main__":
+    TLSLibrary.update()

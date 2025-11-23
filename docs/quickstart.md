@@ -11,6 +11,8 @@ Begin by importing the library:
 
 ```pycon
 >>> import tls_requests
+>>> import logging
+>>> logging.basicConfig(level=logging.INFO)
 ```
 
 Making HTTP Requests
@@ -24,6 +26,7 @@ Fetch a webpage using a GET request:
 >>> r = tls_requests.get('https://httpbin.org/get')
 >>> r
 <Response [200 OK]>
+>>> # Cookies now have proper domain backfilled from request URL
 ```
 
 ### POST Request
