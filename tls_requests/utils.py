@@ -33,9 +33,15 @@ else:
 def get_logger(
     name: str = "TLSRequests", level: int | str = logging.INFO
 ) -> logging.Logger:
-    logging.basicConfig(format=FORMAT, datefmt=DATE_FORMAT, level=level)
     logger = logging.getLogger(name)
     logger.setLevel(level)
+
+    if not logger.handlers:
+        handler = logging.StreamHandler()
+        formatter = logging.Formatter(FORMAT, datefmt=DATE_FORMAT)
+        handler.setFormatter(formatter)
+        logger.addHandler(handler)
+
     return logger
 
 

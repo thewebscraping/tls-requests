@@ -343,6 +343,15 @@ class BaseClient:
             is_byte_response=config.isByteResponse,
         )
         response.request = request
+        
+        # Fix missing domain in cookies
+        if response.cookies:
+            for cookie in response.cookies.cookiejar:
+                if not cookie.domain:
+                    cookie.domain = request.url.host
+                    cookie.domain_specified = False
+                    cookie.domain_initial_dot = False
+
         response.default_encoding = self.encoding
         response.elapsed = datetime.timedelta(seconds=time.perf_counter() - start)
         if response.is_redirect:
