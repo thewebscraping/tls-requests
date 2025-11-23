@@ -5,8 +5,8 @@ Release History
 ------------------
 **Improvements:**
 
-- Optimized logging.
-- Fixed cookie response handling.
+- Optimized logging. ([#46](https://github.com/thewebscraping/tls-requests/issues/46))
+- Fixed cookie response handling. ([#47](https://github.com/thewebscraping/tls-requests/issues/47))
 
 1.1.6 (2025-10-14)
 ------------------
