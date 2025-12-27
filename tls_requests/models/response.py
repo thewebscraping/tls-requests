@@ -142,19 +142,19 @@ class Response:
     @property
     def encoding(self) -> str:
         if self._encoding is None:
-            encoding = self.charset
-            if encoding is None:
-                if isinstance(self.default_encoding, str):
-                    try:
-                        codecs.lookup(self.default_encoding)
-                        encoding = self.default_encoding
-                    except LookupError:
-                        pass
-
-                if not encoding and chardet and self.content:
-                    encoding = chardet.detect(self.content)["encoding"]
-
-            self._encoding = encoding or "utf-8"
+            encoding = self.charset or self.default_encoding
+            if not encoding and chardet and self.content:
+                encoding = chardet.detect(self.content)["encoding"]
+            try:
+                if encoding:
+                    # fix: charset=utf-8,gbk
+                    encoding = encoding.split(",")[0].strip()
+                    codecs.lookup(encoding)
+                    self._encoding = encoding
+                else:
+                    raise LookupError
+            except LookupError:
+                self._encoding = "utf-8"  # fallback to utf-8
         return self._encoding
 
     @property
