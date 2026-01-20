@@ -1,7 +1,7 @@
 __title__ = "wrapper-tls-requests"
 __description__ = "A powerful and lightweight Python library for making secure and reliable HTTP/TLS fingerprint requests."
 __url__ = "https://github.com/thewebscraping/tls-requests"
-__version__ = "1.1.9"
+__version__ = "1.2.0"
 __author__ = "Tu Pham"
 __author_email__ = "thetwofarm@gmail.com"
 __license__ = "MIT"
