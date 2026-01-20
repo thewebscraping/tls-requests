@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import ipaddress
 import time
 from collections.abc import Mapping
 from typing import Any, ItemsView, KeysView, Union, ValuesView
@@ -284,7 +285,10 @@ class URL:
     @property
     def netloc(self) -> str:
         """The network location, including host and port."""
-        return ":".join([self.host, self.port]) if self.port else self.host
+        host = self.host
+        if ":" in host and not (host.startswith("[") and host.endswith("]")):
+            host = "[%s]" % host
+        return ":".join([host, self.port]) if self.port else host
 
     @property
     def query(self) -> str:
@@ -335,12 +339,21 @@ class URL:
         self.auth = parsed.username, parsed.password
         self.scheme = parsed.scheme
 
-        try:
-            self.host = idna.encode(parsed.hostname.lower()).decode("ascii")
-        except AttributeError:
+        # Handle Hostname (Supports IPv4, IPv6 and IDNA Domain)
+        hostname = (parsed.hostname or "").lower()
+        if not hostname:
             self.host = ""
-        except idna.IDNAError:
-            raise URLError("Invalid IDNA hostname.")
+        else:
+            try:
+                # If hostname is an IP address, keep the format as is
+                ipaddress.ip_address(hostname)
+                self.host = hostname
+            except ValueError:
+                # If not an IP, apply IDNA encoding for domain names
+                try:
+                    self.host = idna.encode(hostname).decode("ascii")
+                except idna.IDNAError:
+                    raise URLError("Invalid IDNA hostname: %s" % hostname)
 
         self.port = ""
         try:
@@ -513,7 +526,10 @@ class Proxy(URL):
                 )
 
             # Re-parse to create a clean object with only scheme and netloc
-            return urlparse("%s://%s" % (parsed.scheme, parsed.netloc))
+            parsed = urlparse("%s://%s" % (parsed.scheme, parsed.netloc))
+            self.path = ""
+            self.fragment = ""
+            return parsed
         except URLError:
             raise ProxyError("Invalid proxy: %s" % url)
 
