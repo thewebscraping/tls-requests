@@ -1,22 +1,21 @@
 # Using Rotators
 
-The `tls_requests` library is designed to be smart out of the box. By default, it automatically rotates through realistic headers and client identifiers to make your requests appear authentic and avoid detection.
+The `tls_requests` library supports automatic rotation of headers, client identifiers, and proxies to make your requests appear authentic and avoid detection.
 
-This guide explains how these default rotators work and how you can customize or disable them.
+This guide explains how rotators work and how you can customize them.
 
 * * *
 
 ### Header Rotator
 
-**Default Behavior: Automatic Rotation**
+**Automatic Rotation**
 
-When you initialize a `Client` without specifying the `headers` parameter, it will **automatically rotate** through a built-in collection of header templates that mimic popular browsers like Chrome, Firefox, and Safari across different operating systems.
+When you initialize a `Client` without specifying the `headers` parameter, it will not rotate by default unless you explicitly provide a `HeaderRotator`.
 
 ```python
 import tls_requests
 
-# No extra configuration needed!
-# This client will automatically use a different, realistic header set for each request.
+# Using HeaderRotator to rotate browser headers
 with tls_requests.Client(headers=tls_requests.HeaderRotator()) as client:
     # Request 1 might have Chrome headers
     res1 = client.get("https://httpbin.org/headers")
@@ -97,8 +96,8 @@ proxy_list = [
     "http://user1:pass1@proxy.example.com:8080",
     "http://user2:pass2@proxy.example.com:8081",
     "socks5://proxy.example.com:8082",
-    "proxy.example.com:8083",  #  (defaults to http)
-    "http://user:pass@proxy.example.com:8084|1.0|US",  #  http://user:pass@host:port|weight|region
+    "proxy.example.com:8083",  # (defaults to http)
+    "http://user:pass@proxy.example.com:8084|1.0|US",  # http://user:pass@host:port|weight|region
 ]
 
 # Provide a list to enable proxy rotation.

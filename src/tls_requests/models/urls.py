@@ -2,19 +2,24 @@ from __future__ import annotations
 
 import ipaddress
 import time
-from collections.abc import Mapping
-from typing import Any, ItemsView, KeysView, Union, ValuesView
+from collections.abc import Mapping, MutableMapping
+from typing import Any, Dict, ItemsView, Iterator, KeysView, Optional, Union, ValuesView
 from urllib.parse import ParseResult, quote, unquote, urlencode, urlparse
 
 import idna
 
 from ..exceptions import ProxyError, URLError, URLParamsError
-from ..types import URL_ALLOWED_PARAMS, ProxyTypes, URLParamTypes, URLTypes
+from ..types import URL_ALLOWED_PARAMS, URLParamTypes, URLTypes
+from ..utils import to_str
 
-__all__ = ["URL", "URLParams", "Proxy"]
+__all__ = (
+    "URL",
+    "URLParams",
+    "Proxy",
+)
 
 
-class URLParams(Mapping):
+class URLParams(MutableMapping):
     """
     A mapping-like object for managing URL query parameters.
 
@@ -38,7 +43,7 @@ class URLParams(Mapping):
         True
     """
 
-    def __init__(self, params: URLParamTypes = None, **kwargs):
+    def __init__(self, params: Optional[URLParamTypes] = None, **kwargs):
         """
         Initializes the URLParams object.
 
@@ -50,14 +55,14 @@ class URLParams(Mapping):
         Raises:
             URLParamsError: If `params` is not a valid mapping type.
         """
-        self._data = self._prepare(params, **kwargs)
+        self._data: Dict[str, Any] = self._prepare(params, **kwargs)
 
     @property
     def params(self) -> str:
         """Returns the encoded URL parameters as a query string."""
         return str(self)
 
-    def update(self, params: URLParamTypes = None, **kwargs):
+    def update(self, params: Optional[URLParamTypes] = None, **kwargs: Any) -> None:  # type: ignore[override]
         """
         Updates the current parameters with new ones from a mapping or keyword args.
 
@@ -66,7 +71,6 @@ class URLParams(Mapping):
             **kwargs: Additional key-value pairs to add.
         """
         self._data.update(self._prepare(params, **kwargs))
-        return self
 
     def keys(self) -> KeysView:
         """Returns a view of the parameter keys."""
@@ -82,7 +86,7 @@ class URLParams(Mapping):
 
     def copy(self) -> URLParams:
         """Returns a shallow copy of the current instance."""
-        return self.__class__(self._data.copy())
+        return self.__class__(self._data.copy())  # type: ignore[arg-type]
 
     def __str__(self):
         """Returns the URL-encoded string representation of the parameters."""
@@ -96,24 +100,24 @@ class URLParams(Mapping):
         """Checks if a key exists in the parameters."""
         return key in self._data
 
-    def __setitem__(self, key, value):
+    def __setitem__(self, key: str, value: Any) -> None:
         """Sets a parameter key-value pair, normalizing the input."""
-        self._data.update(self._prepare({key: value}))
+        self._data[key] = value
 
-    def __getitem__(self, key):
-        """Retrieves a parameter value by its key."""
+    def __getitem__(self, key: str) -> Any:
+        """Retrieves a parameter value."""
         return self._data[key]
 
-    def __delitem__(self, key):
-        """Deletes a parameter by its key."""
+    def __delitem__(self, key: str) -> None:
+        """Deletes a parameter key."""
         del self._data[key]
 
-    def __iter__(self):
+    def __iter__(self) -> Iterator:
         """Returns an iterator over the parameter keys."""
-        return (k for k in self.keys())
+        return iter(self._data)
 
     def __len__(self) -> int:
-        """Returns the number of unique parameter keys."""
+        """Returns the number of parameters."""
         return len(self._data)
 
     def __hash__(self) -> int:
@@ -129,7 +133,7 @@ class URLParams(Mapping):
                 return False
         return bool(self.params == other.params)
 
-    def _prepare(self, params: URLParamTypes = None, **kwargs) -> Mapping:
+    def _prepare(self, params: Optional[URLParamTypes] = None, **kwargs: Any) -> Dict[str, Any]:
         """
         Normalizes and prepares the input parameters.
 
@@ -138,17 +142,23 @@ class URLParams(Mapping):
             **kwargs: Additional keyword arguments.
 
         Returns:
-            A mapping with normalized keys and values.
+            A dictionary with normalized keys and values.
 
         Raises:
             URLParamsError: If keys or values are of an invalid type.
         """
-        params = params or {}
-        if not isinstance(params, (dict, self.__class__)):
+        if params is None:
+            prepared = {}
+        elif isinstance(params, self.__class__):
+            prepared = dict(params.items())
+        elif isinstance(params, Mapping):
+            prepared = dict(params)
+        else:
             raise URLParamsError("Invalid parameters.")
 
-        params.update(kwargs)
-        for k, v in params.items():
+        prepared.update(kwargs)
+        result = {}
+        for k, v in prepared.items():
             if not isinstance(k, (str, bytes)):
                 raise URLParamsError("Invalid parameters key type.")
 
@@ -157,8 +167,8 @@ class URLParams(Mapping):
             else:
                 v = self.normalize(v)
 
-            params[self.normalize(k)] = v
-        return params
+            result[self.normalize(k)] = v
+        return result
 
     def normalize(self, s: URL_ALLOWED_PARAMS):
         """
@@ -250,7 +260,7 @@ class URL:
             URLError: If the provided URL is invalid.
         """
         self._parsed = self._prepare(url)
-        self._url = None
+        self._url: Optional[str] = None
         self._params = URLParams(params)
 
     @property
@@ -310,7 +320,7 @@ class URL:
         """Returns a representation of the URL with a secured password."""
         return "<%s: %s>" % (self.__class__.__name__, unquote(self._build(True)))
 
-    def _prepare(self, url: Union[T, str, bytes]) -> ParseResult:
+    def _prepare(self, url: Union["URL", str, bytes]) -> ParseResult:
         """
         Validates, decodes, and parses the input URL.
 
@@ -493,7 +503,7 @@ class Proxy(URL):
         except ValueError:
             raise ProxyError("Weight must be an integer or float.")
 
-    def _prepare(self, url: ProxyTypes) -> ParseResult:
+    def _prepare(self, url: Union["URL", str, bytes]) -> ParseResult:
         """
         Parses the proxy URL, ensuring it has a valid scheme and format.
 
@@ -510,28 +520,28 @@ class Proxy(URL):
         """
         try:
             if isinstance(url, bytes):
-                url = url.decode("utf-8")
+                url_str = url.decode("utf-8")
+            else:
+                url_str = str(url)
 
-            if isinstance(url, str):
-                url = url.strip()
+            url_str = url_str.strip()
 
-            if "://" not in str(url):
-                url = f"http://{url}"
+            if "://" not in url_str:
+                url_str = f"http://{url_str}"
 
-            parsed = super(Proxy, self)._prepare(url)
+            parsed = super(Proxy, self)._prepare(url_str)
             if str(parsed.scheme).lower() not in self.ALLOWED_SCHEMES:
                 raise ProxyError(
-                    "Invalid proxy scheme `%s`. The allowed schemes are ('http', 'https', 'socks5', 'socks5h')."
-                    % parsed.scheme
+                    f"Invalid proxy scheme `{parsed.scheme}`. The allowed schemes are ('http', 'https', 'socks5', 'socks5h')."
                 )
 
             # Re-parse to create a clean object with only scheme and netloc
-            parsed = urlparse("%s://%s" % (parsed.scheme, parsed.netloc))
+            parsed = urlparse(str(to_str(parsed.scheme)) + "://" + str(to_str(parsed.netloc)))
             self.path = ""
             self.fragment = ""
             return parsed
         except URLError:
-            raise ProxyError("Invalid proxy: %s" % url)
+            raise ProxyError(f"Invalid proxy: {to_str(url)}")
 
     def _build(self, secure: bool = False) -> str:
         """

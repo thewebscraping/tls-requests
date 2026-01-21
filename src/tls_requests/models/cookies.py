@@ -2,12 +2,14 @@
 
 from __future__ import annotations
 
+import calendar
 import copy
+import time
 from email.message import Message
 from http import cookiejar as cookielib
 from http.cookiejar import Cookie
 from http.cookies import Morsel
-from typing import TYPE_CHECKING, Iterator, MutableMapping, Optional
+from typing import TYPE_CHECKING, Any, Dict, Iterator, MutableMapping, Optional
 from urllib.parse import urlparse, urlunparse
 
 from ..exceptions import CookieConflictError, CookieError
@@ -18,7 +20,7 @@ if TYPE_CHECKING:
     from .response import Response
 
 
-__all__ = ["Cookies"]
+__all__ = ("Cookies",)
 
 
 class MockResponse:
@@ -33,9 +35,8 @@ class MockResponse:
 
 
 class MockRequest:
-
     def __init__(self, request: Request):
-        self._new_headers = {}
+        self._new_headers: Dict[str, str] = {}
         self._request = request
         self._headers = request.headers
         self.type = urlparse(str(request.url)).scheme
@@ -57,7 +58,7 @@ class MockRequest:
 
         # If they did set it, retrieve it and reconstruct the expected domain
         host = self._headers["Host"]
-        parsed = urlparse(self.request_url)
+        parsed = urlparse(str(self._request.url))
         # Reconstruct the URL as we expect it
         return urlunparse(
             [
@@ -273,13 +274,16 @@ class RequestsCookieJar(cookielib.CookieJar, MutableMapping):
             cookie.value = cookie.value.replace('\\"', "")
         return super().set_cookie(cookie, *args, **kwargs)  # type: ignore
 
-    def update(self, other):  # noqa
+    def update(self, other: Any = None, **kwargs: Any) -> None:  # type: ignore[override]
         """Updates this jar with cookies from another CookieJar or dict-like"""
-        if isinstance(other, cookielib.CookieJar):
-            for cookie in other:
-                self.set_cookie(copy.copy(cookie))
-        else:
-            super().update(other)
+        if other is not None:
+            if isinstance(other, cookielib.CookieJar):
+                for cookie in other:
+                    self.set_cookie(copy.copy(cookie))
+            else:
+                super().update(other)
+        if kwargs:
+            super().update(**kwargs)
 
     def _find(self, name, domain=None, path=None):
         """Requests uses this method internally to get cookie values.
@@ -352,7 +356,7 @@ class RequestsCookieJar(cookielib.CookieJar, MutableMapping):
 
     def get_policy(self):
         """Return the CookiePolicy instance used."""
-        return self._policy
+        return getattr(self, "_policy", None)
 
 
 def extract_cookies_to_jar(cookiejar, response, request):
@@ -512,7 +516,7 @@ def merge_cookies(cookiejar, cookies):
         cookiejar = cookiejar_from_dict(cookies, cookiejar=cookiejar, overwrite=False)
     elif isinstance(cookies, cookielib.CookieJar):
         try:
-            cookiejar.update(cookies)
+            cookiejar.update(cookies)  # type: ignore
         except AttributeError:
             for cookie_in_jar in cookies:
                 cookiejar.set_cookie(cookie_in_jar)
@@ -521,23 +525,23 @@ def merge_cookies(cookiejar, cookies):
 
 
 class Cookies(MutableMapping[str, str]):
-    def __init__(self, cookies: CookieTypes = None) -> None:
+    def __init__(self, cookies: Optional[CookieTypes] = None) -> None:
         self.cookiejar = self._prepare_cookiejar(cookies)
 
-    def _prepare_cookiejar(self, cookies: CookieTypes = None) -> RequestsCookieJar:
+    def _prepare_cookiejar(self, cookies: Optional[CookieTypes] = None) -> RequestsCookieJar:
         if isinstance(cookies, self.__class__):
             return cookies.cookiejar
 
         if isinstance(cookies, (dict, tuple, list, set)):
             cookiejar = RequestsCookieJar()
-            if isinstance(cookies, dict):
-                cookies = cookies.items()
+            cookie_items = cookies.items() if isinstance(cookies, dict) else cookies
 
-            for k, v in cookies:
-                if isinstance(v, (float, int)):
-                    v = str(v)
-
-                cookiejar.set(k, v)
+            for item in cookie_items:
+                if isinstance(item, (tuple, list)) and len(item) >= 2:
+                    k, v = item[0], item[1]
+                    if isinstance(v, (float, int)):
+                        v = str(v)
+                    cookiejar.set(str(k), str(v))
             return cookiejar
 
         return RequestsCookieJar()
@@ -550,7 +554,7 @@ class Cookies(MutableMapping[str, str]):
 
     def set(self, name, value, **kwargs) -> Optional[Cookie]:
         if value is None:
-            remove_cookie_by_name(self, name, domain=kwargs.get("domain"), path=kwargs.get("path"))
+            remove_cookie_by_name(self.cookiejar, name, domain=kwargs.get("domain"), path=kwargs.get("path"))
             return None
 
         if isinstance(value, Morsel):
@@ -561,13 +565,13 @@ class Cookies(MutableMapping[str, str]):
         self.cookiejar.set_cookie(cookie)
         return cookie
 
-    def get(self, name, default=None, domain=None, path=None) -> str:
+    def get(self, name, default=None, domain=None, path=None) -> Any:
         return self.cookiejar.get(name, default, domain, path)
 
-    def delete(self, name: str, domain: str = None, path: str = None) -> None:
-        return remove_cookie_by_name(self.cookiejar, name)
+    def delete(self, name: str, domain: Optional[str] = None, path: Optional[str] = None) -> None:
+        return remove_cookie_by_name(self.cookiejar, name, domain=domain, path=path)
 
-    def clear(self, domain: str = None, path: str = None):
+    def clear(self, domain: Optional[str] = None, path: Optional[str] = None):
         args = []
         if domain:
             args.append(domain)
@@ -576,23 +580,22 @@ class Cookies(MutableMapping[str, str]):
 
         self.cookiejar.clear(*args)
 
-    def update(self, cookies: CookieTypes = None) -> "Cookies":  # noqa
+    def update(self, cookies: Optional[CookieTypes] = None) -> None:  # type: ignore[override]
         self.cookiejar.update(self._prepare_cookiejar(cookies))
-        return self
 
     def copy(self) -> "Cookies":
         ret = self.__class__()
         ret.cookiejar = _copy_cookie_jar(self.cookiejar)
         return ret
 
-    def __setitem__(self, name: str, value: str) -> Optional[Cookie]:
-        return self.set(name, value)
+    def __setitem__(self, name: str, value: str) -> None:  # type: ignore[override]
+        self.set(name, value)
 
     def __getitem__(self, name: str) -> str:
-        return self.cookiejar.get(name)
+        return self.cookiejar.get(name) or ""
 
     def __delitem__(self, name: str) -> None:
-        return self.delete(name)
+        self.delete(name)
 
     def __len__(self) -> int:
         return len(self.cookiejar)

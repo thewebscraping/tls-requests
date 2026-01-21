@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from pytest_httpserver import HTTPServer
 from werkzeug import Request, Response
 
@@ -35,7 +37,9 @@ def test_response_headers(httpserver: HTTPServer):
 
 
 def test_response_case_insensitive_headers(httpserver: HTTPServer):
-    httpserver.expect_request("/headers").with_post_hook(hook_response_case_insensitive_headers).respond_with_data(b"OK")
+    httpserver.expect_request("/headers").with_post_hook(hook_response_case_insensitive_headers).respond_with_data(
+        b"OK"
+    )
     response = tls_requests.get(httpserver.url_for("/headers"))
     assert response.status_code, 200
     assert response.headers["foo"] == "bar"
@@ -43,13 +47,13 @@ def test_response_case_insensitive_headers(httpserver: HTTPServer):
 
 def test_chrome_dynamic_headers():
     # Test chrome_112
-    config = TLSConfig.from_kwargs(tls_identifier="chrome_112")
+    config = TLSConfig.from_kwargs(client_identifier="chrome_112")
     headers = config.headers
     assert "Chrome/112" in headers.get("user-agent", "")
     assert 'v="112"' in headers.get("sec-ch-ua", "")
 
     # Test chrome_133 (default)
-    config_default = TLSConfig.from_kwargs(tls_identifier="chrome_133")
+    config_default = TLSConfig.from_kwargs(client_identifier="chrome_133")
     headers_default = config_default.headers
     assert "Chrome/133" in headers_default.get("user-agent", "")
     assert 'v="133"' in headers_default.get("sec-ch-ua", "")
@@ -57,7 +61,7 @@ def test_chrome_dynamic_headers():
 
 def test_firefox_dynamic_headers():
     # Test firefox_120
-    config = TLSConfig.from_kwargs(tls_identifier="firefox_120")
+    config = TLSConfig.from_kwargs(client_identifier="firefox_120")
     headers = config.headers
     assert "Firefox/120" in headers.get("user-agent", "")
     assert "rv:120" in headers.get("user-agent", "")
@@ -65,7 +69,7 @@ def test_firefox_dynamic_headers():
 
 def test_safari_dynamic_headers():
     # Test safari_17
-    config = TLSConfig.from_kwargs(tls_identifier="safari_17")
+    config = TLSConfig.from_kwargs(client_identifier="safari_17")
     headers = config.headers
     assert "Version/17" in headers.get("user-agent", "")
 
@@ -73,7 +77,7 @@ def test_safari_dynamic_headers():
 def test_custom_headers_override():
     # Custom headers should not be overridden by dynamic injection
     custom_headers = {"User-Agent": "MyCustomUA", "X-Test": "Value"}
-    config = TLSConfig.from_kwargs(tls_identifier="chrome_112", headers=custom_headers)
+    config = TLSConfig.from_kwargs(client_identifier="chrome_112", headers=custom_headers)
     assert config.headers["User-Agent"] == "MyCustomUA"
     assert config.headers["X-Test"] == "Value"
     assert "sec-ch-ua" not in config.headers  # Should not inject if headers provided
@@ -81,5 +85,5 @@ def test_custom_headers_override():
 
 def test_no_injection_for_non_browser():
     # Injection should only happen for chrome/firefox/safari
-    config = TLSConfig.from_kwargs(tls_identifier="okhttp4_android_12")
+    config = TLSConfig.from_kwargs(client_identifier="okhttp4_android_12")
     assert not config.headers  # Should be empty or only basic defaults if any

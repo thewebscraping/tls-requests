@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from pytest_httpserver import HTTPServer
 from werkzeug import Request, Response
 

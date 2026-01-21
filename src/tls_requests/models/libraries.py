@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import ctypes
 import glob
 import json
@@ -16,7 +18,7 @@ from tls_requests.utils import get_logger
 
 logger = get_logger("TLSLibrary")
 
-__all__ = ["TLSLibrary"]
+__all__ = ("TLSLibrary",)
 
 LATEST_VERSION_TAG_NAME = "v1.13.1"
 BIN_DIR = os.path.join(Path(__file__).resolve(strict=True).parent.parent / "bin")
@@ -45,16 +47,17 @@ MACHINE = ARCH_MAPPING.get(machine()) or machine()
 if PLATFORM == "linux":
     FILE_EXT = "so"
     try:
-        platform_data = platform.freedesktop_os_release()
-        if "ID" in platform_data:
-            curr_system = platform_data["ID"]
-        else:
-            curr_system = platform_data.get("id")
+        if hasattr(platform, "freedesktop_os_release"):
+            platform_data = platform.freedesktop_os_release()
+            curr_system: Optional[str] = None
+            if "ID" in platform_data:
+                curr_system = platform_data["ID"]
+            else:
+                curr_system = platform_data.get("id")
 
-        if "ubuntu" in str(curr_system).lower():
-            IS_UBUNTU = True
-
-    except Exception as e:  # noqa
+            if curr_system and "ubuntu" in curr_system.lower():
+                IS_UBUNTU = True
+    except Exception:
         pass
 
 elif PLATFORM in ("win32", "cygwin"):
@@ -70,7 +73,6 @@ TLS_LIBRARY_PATH = os.getenv("TLS_LIBRARY_PATH")
 
 @dataclass
 class BaseRelease:
-
     @classmethod
     def model_fields_set(cls) -> set:
         return {model_field.name for model_field in fields(cls)}
@@ -134,14 +136,14 @@ class TLSLibrary:
             Loads the library, either from an existing path or by discovering and downloading it.
     """
 
-    _PATH: str = None
+    _PATH: Optional[str] = None
     _LIBRARY: Optional[ctypes.CDLL] = None
 
     @staticmethod
     def _parse_version(version_string: str) -> Tuple[int, ...]:
         """Converts a version string (e.g., "v1.11.2") to a comparable tuple (1, 11, 2)."""
         try:
-            parts = version_string.lstrip("v").split(".")
+            parts = str(version_string).lstrip("v").split(".")
             return tuple(map(int, parts))
         except (ValueError, AttributeError):
             return 0, 0, 0
@@ -155,7 +157,7 @@ class TLSLibrary:
         return 0, 0, 0
 
     @classmethod
-    def cleanup_files(cls, keep_file: str = None):
+    def cleanup_files(cls, keep_file: Optional[str] = None):
         """Removes all library files in the BIN_DIR except for the one to keep."""
         for file_path in cls.find_all():
             is_remove = True
@@ -192,7 +194,7 @@ class TLSLibrary:
             logger.error(f"Error saving local release config: {e}")
 
     @classmethod
-    def fetch_api(cls, version: str = None, retries: int = 3):
+    def fetch_api(cls, version: Optional[str] = None, retries: int = 3):
         def _process_data(data):
             releases_data = data if isinstance(data, list) else [data]
 
@@ -200,20 +202,24 @@ class TLSLibrary:
 
             if version is not None:
                 version_ = "v%s" % version if not str(version).startswith("v") else str(version)
-                releases = [release for release in releases if re.search(version_, release.name or release.tag_name, re.I)]
+                releases = [
+                    release for release in releases if re.search(version_, release.name or release.tag_name, re.I)
+                ]
 
             found_urls = False
             for release in releases:
                 for asset in release.assets:
-                    if IS_UBUNTU and PATTERN_UBUNTU_RE.search(asset.name):
-                        ubuntu_urls.append(asset.browser_download_url)
-                        found_urls = True
-                    if PATTERN_RE.search(asset.name):
-                        asset_urls.append(asset.browser_download_url)
-                        found_urls = True
+                    if asset.name:
+                        if IS_UBUNTU and PATTERN_UBUNTU_RE.search(asset.name):
+                            ubuntu_urls.append(asset.browser_download_url)
+                            found_urls = True
+                        if PATTERN_RE.search(asset.name):
+                            asset_urls.append(asset.browser_download_url)
+                            found_urls = True
             return found_urls
 
-        asset_urls, ubuntu_urls = [], []
+        asset_urls: List[str] = []
+        ubuntu_urls: List[str] = []
         api_data = None
 
         for _ in range(retries):
@@ -232,7 +238,7 @@ class TLSLibrary:
                             logger.info("Fetched release data from GitHub API.")
                             break
             except Exception as ex:
-                logger.debug(f"GitHub API fetch failed (Attempt {_+1}): {ex}")
+                logger.debug(f"GitHub API fetch failed (Attempt {_ + 1}): {ex}")
 
         if not asset_urls and not ubuntu_urls:
             local_data = cls.import_config()
@@ -245,19 +251,29 @@ class TLSLibrary:
                 v_tag = version or LATEST_VERSION_TAG_NAME
                 if not v_tag.startswith("v"):
                     v_tag = f"v{v_tag}"
-                v_num = v_tag.lstrip("v")
 
-                target_platform = "ubuntu" if IS_UBUNTU else PLATFORM
                 target_arch = MACHINE
                 if PLATFORM == "windows":
                     if MACHINE == "amd64":
                         target_arch = "64"
                     elif MACHINE == "386":
                         target_arch = "32"
-                direct_filename = f"tls-client-{target_platform}-{target_arch}-{v_num}.{FILE_EXT}"
-                direct_url = f"https://github.com/bogdanfinn/tls-client/releases/download/{v_tag}/{direct_filename}"
-                asset_urls.append(direct_url)
-                logger.info(f"Fallback: generated direct download URL: {direct_url}")
+
+                # Generate a few potential candidates for the fallback URL
+                platforms = [PLATFORM]
+                if IS_UBUNTU:
+                    platforms.insert(0, "ubuntu")
+
+                for plat in platforms:
+                    # Try with 'v' and without 'v' in filename as naming patterns vary
+                    for v_str in [v_tag, v_tag.lstrip("v")]:
+                        direct_filename = f"tls-client-{plat}-{target_arch}-{v_str}.{FILE_EXT}"
+                        direct_url = (
+                            f"https://github.com/bogdanfinn/tls-client/releases/download/{v_tag}/{direct_filename}"
+                        )
+                        asset_urls.append(direct_url)
+
+                logger.info(f"Fallback: generated direct download URLs: {', '.join(asset_urls)}")
 
         for url in ubuntu_urls:
             yield url
@@ -266,7 +282,7 @@ class TLSLibrary:
             yield url
 
     @classmethod
-    def find(cls) -> str:
+    def find(cls) -> Optional[str]:
         for fp in cls.find_all():
             if PATTERN_RE.search(fp):
                 return fp
@@ -286,11 +302,12 @@ class TLSLibrary:
             logger.info("Update complete.")
             return downloaded_fp
         logger.error("Update failed.")
+        return None
 
     upgrade = update
 
     @classmethod
-    def download(cls, version: str = None) -> str:
+    def download(cls, version: Optional[str] = None) -> Optional[str]:
         try:
             logger.info(
                 "System Info - Platform: %s, Machine: %s, File Ext : %s."
@@ -302,49 +319,56 @@ class TLSLibrary:
             )
             download_url = None
             for url in cls.fetch_api(version):
-                if url:
-                    download_url = url
-                    break
+                if not url:
+                    continue
 
-            logger.info("Library Download URL: %s" % download_url)
-            if download_url:
-                destination_name = download_url.split("/")[-1]
-                destination = os.path.join(BIN_DIR, destination_name)
+                download_url = url
+                logger.info("Trying to download library from: %s" % download_url)
 
-                # Use standard library's urllib to download the file
-                with urllib.request.urlopen(download_url, timeout=10) as response:
-                    if response.status != 200:
-                        raise urllib.error.URLError(f"Failed to download file: HTTP {response.status}")
+                try:
+                    destination_name = download_url.split("/")[-1]
+                    destination = os.path.join(BIN_DIR, destination_name)
 
-                    os.makedirs(BIN_DIR, exist_ok=True)
-                    total_size = int(response.headers.get("content-length", 0))
-                    chunk_size = 8192  # 8KB
+                    # Use standard library's urllib to download the file
+                    with urllib.request.urlopen(download_url, timeout=15) as response:
+                        if response.status != 200:
+                            logger.debug(f"Skipping {download_url}: HTTP {response.status}")
+                            continue
 
-                    with open(destination, "wb") as file:
-                        downloaded = 0
-                        while True:
-                            chunk = response.read(chunk_size)
-                            if not chunk:
-                                break
+                        os.makedirs(BIN_DIR, exist_ok=True)
+                        total_size = int(response.headers.get("content-length", 0))
+                        chunk_size = 8192  # 8KB
 
-                            file.write(chunk)
-                            downloaded += len(chunk)
+                        with open(destination, "wb") as file:
+                            downloaded = 0
+                            while True:
+                                chunk = response.read(chunk_size)
+                                if not chunk:
+                                    break
 
-                            # Simple text-based progress bar
-                            if total_size > 0:
-                                percent = downloaded / total_size * 100
-                                bar_length = 50
-                                filled_length = int(bar_length * downloaded // total_size)
-                                bar = "=" * filled_length + "-" * (bar_length - filled_length)
-                                sys.stdout.write(f"\rDownloading {destination_name}: [{bar}] {percent:.1f}%")
-                                sys.stdout.flush()
+                                file.write(chunk)
+                                downloaded += len(chunk)
 
-                return destination
+                                # Simple text-based progress bar
+                                if total_size > 0:
+                                    percent = (downloaded / total_size) * 100
+                                    bar_length = 50
+                                    filled_length = int(bar_length * downloaded // total_size)
+                                    bar = "=" * filled_length + "-" * (bar_length - filled_length)
+                                    sys.stdout.write(f"\rDownloading {destination_name}: [{bar}] {percent:.1f}%")
+                                    sys.stdout.flush()
 
-        except (urllib.error.URLError, urllib.error.HTTPError) as ex:
-            logger.error("Unable to download file: %s" % ex)
+                        sys.stdout.write("\n")
+                        return destination
+                except (urllib.error.URLError, urllib.error.HTTPError) as ex:
+                    logger.debug(f"Failed to download from {download_url}: {ex}")
+                    continue
+
+            logger.error("All download attempts failed.")
+
         except Exception as e:
             logger.error("An unexpected error occurred during download: %s" % e)
+        return None
 
     @classmethod
     def set_path(cls, fp: str):
@@ -383,7 +407,7 @@ class TLSLibrary:
 
         logger.debug(f"Required library version: {LATEST_VERSION_TAG_NAME}")
         local_files = cls.find_all()
-        newest_local_version = (0, 0, 0)
+        newest_local_version: tuple[int, ...] = (0, 0, 0)
         newest_local_file = None
 
         if local_files:
@@ -431,4 +455,7 @@ class TLSLibrary:
 
 
 if __name__ == "__main__":
-    TLSLibrary.update()
+    try:
+        TLSLibrary.load()
+    except Exception as ex:
+        logger.error(f"Manual load test failed: {ex}")

@@ -1,4 +1,19 @@
-from .__version__ import __description__, __title__, __version__
+from __future__ import annotations
+
+import importlib.metadata
+
+try:
+    __version__ = importlib.metadata.version("wrapper-tls-requests")
+except importlib.metadata.PackageNotFoundError:
+    __version__ = "0.0.0"
+
+__title__ = "wrapper-tls-requests"
+__description__ = (
+    "A powerful and lightweight Python library for making secure and reliable HTTP/TLS fingerprint requests."
+)
+__author__ = "Tu Pham"
+__license__ = "MIT"
+
 from .api import *
 from .client import *
 from .exceptions import *

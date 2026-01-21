@@ -1,17 +1,19 @@
 from __future__ import annotations
 
-CHUNK_SIZE = 65_536
-DEFAULT_TIMEOUT = 30.0
-DEFAULT_MAX_REDIRECTS = 9
-DEFAULT_FOLLOW_REDIRECTS = True
-DEFAULT_TLS_DEBUG = False
-DEFAULT_TLS_PROTOCOL_RACING = True
-DEFAULT_TLS_ALLOW_HTTP = False
-DEFAULT_TLS_INSECURE_SKIP_VERIFY = False
-DEFAULT_TLS_HTTP2 = "auto"
-DEFAULT_TLS_IDENTIFIER = "chrome_133"
+from typing import Dict, Literal
 
-BROWSER_HEADERS = {
+CHUNK_SIZE: int = 65_536
+DEFAULT_TIMEOUT: float = 30.0
+DEFAULT_MAX_REDIRECTS: int = 9
+DEFAULT_FOLLOW_REDIRECTS: bool = True
+DEFAULT_DEBUG: bool = False
+DEFAULT_PROTOCOL_RACING: bool = True
+DEFAULT_ALLOW_HTTP: bool = False
+DEFAULT_INSECURE_SKIP_VERIFY: bool = False
+DEFAULT_HTTP2: Literal["auto", "http1", "http2"] = "auto"
+DEFAULT_CLIENT_IDENTIFIER: str = "chrome_133"
+
+BROWSER_HEADERS: Dict[str, Dict[str, str]] = {
     "chrome": {
         "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/133.0.0.0 Safari/537.36",
         "accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7",
@@ -45,5 +47,5 @@ BROWSER_HEADERS = {
         "sec-fetch-dest": "document",
         "sec-fetch-mode": "navigate",
         "sec-fetch-site": "none",
-    }
+    },
 }

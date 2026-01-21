@@ -1,6 +1,18 @@
 Release History
 ================
 
+1.2.2 (2026-01-21)
+------------------
+**Improvements:**
+
+- **Standardized API Parameters**: Renamed `tls_identifier` to `client_identifier` and `tls_debug` to `debug` for better consistency and professional API surface.
+- **Src Layout Migration**: Refactored the project structure to use a modern `src/` layout, improving package isolation and build reliability.
+- **Type Safety & Testing**: Integrated `mypy` for strict type checking and migrated to `uv run pytest` for comprehensive test verification (80+ tests passing).
+- **Backward Compatibility**: Implemented a centralized fallback and logging warning system for legacy parameters (planned removal in v1.3.0).
+- **Modernized CI/CD**: Fully migrated from `Makefile` to `uv`. Optimized GitHub Actions matrix to support Python 3.9 through 3.13 across Linux, macOS, and Windows.
+- **Enhanced Platform Support**: Improved detection and loading logic for ARM64/aarch64 architectures (Apple Silicon, AWS Graviton).
+- **Project Sustainability**: Added GitHub Sponsors support to the repository metadata and documentation.
+
 1.1.7 (2025-11-23)
 ------------------
 **Improvements:**

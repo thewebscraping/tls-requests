@@ -7,15 +7,22 @@ import random
 import threading
 from abc import ABC, abstractmethod
 from pathlib import Path
-from typing import (Any, Generic, Iterable, Iterator, List, Literal, Optional,
-                    TypeVar, Union)
+from typing import Any, Generic, Iterable, Iterator, List, Literal, Optional, TypeVar, Union
 
 from ..exceptions import RotatorError
-from ..types import HeaderTypes, TLSIdentifierTypes
+from ..types import HeaderTypes, IdentifierTypes
 from .headers import Headers
 from .urls import Proxy
 
+__all__ = [
+    "BaseRotator",
+    "ProxyRotator",
+    "TLSIdentifierRotator",
+    "HeaderRotator",
+]
+
 T = TypeVar("T")
+R = TypeVar("R", bound="BaseRotator")
 
 TLS_IDENTIFIER_TEMPLATES = [
     "chrome_120",
@@ -235,10 +242,10 @@ class BaseRotator(ABC, Generic[T]):
 
     @classmethod
     def from_file(
-        cls,
+        cls: type[R],
         source: Union[str, Path, list],
         strategy: Literal["round_robin", "random", "weighted"] = "random",
-    ) -> "BaseRotator":
+    ) -> R:
         """
         Factory method to create a rotator from a file or a list. This method
         is synchronous as it's typically used during setup.
@@ -316,6 +323,9 @@ class BaseRotator(ABC, Generic[T]):
                 raise ValueError("Rotator is empty.")
             if self.strategy == "random":
                 return random.choice(self.items)
+            if self._iterator is None:
+                self._rebuild_iterator()
+            assert self._iterator is not None
             return next(self._iterator)
 
     def add(self, item: T) -> None:
@@ -349,6 +359,9 @@ class BaseRotator(ABC, Generic[T]):
                 raise ValueError("Rotator is empty.")
             if self.strategy == "random":
                 return random.choice(self.items)
+            if self._iterator is None:
+                self._rebuild_iterator()
+            assert self._iterator is not None
             return next(self._iterator)
 
     async def aadd(self, item: T) -> None:
@@ -419,20 +432,20 @@ class ProxyRotator(BaseRotator[Proxy]):
             self._rebuild_iterator()
 
 
-class TLSIdentifierRotator(BaseRotator[TLSIdentifierTypes]):
+class TLSIdentifierRotator(BaseRotator[IdentifierTypes]):
     """
     A unified rotator for TLS Identifiers, supporting both sync and async operations.
     """
 
     def __init__(
         self,
-        items: Optional[Iterable[T]] = None,
+        items: Optional[Iterable[IdentifierTypes]] = None,
         strategy: Literal["round_robin", "random", "weighted"] = "round_robin",
     ) -> None:
-        super().__init__(items or TLS_IDENTIFIER_TEMPLATES, strategy)
+        super().__init__(items or TLS_IDENTIFIER_TEMPLATES, strategy)  # type: ignore[arg-type]
 
     @classmethod
-    def rebuild_item(cls, item: Any) -> Optional[TLSIdentifierTypes]:
+    def rebuild_item(cls, item: Any) -> Optional[IdentifierTypes]:
         """Processes a raw item to be used as a TLS identifier."""
         if isinstance(item, str):
             return item
@@ -479,10 +492,10 @@ class HeaderRotator(BaseRotator[Headers]):
 
     def __init__(
         self,
-        items: Optional[Iterable[T]] = None,
+        items: Optional[Iterable[HeaderTypes]] = None,
         strategy: Literal["round_robin", "random", "weighted"] = "random",
     ) -> None:
-        super().__init__(items or HEADER_TEMPLATES, strategy)
+        super().__init__(items or HEADER_TEMPLATES, strategy)  # type: ignore[arg-type]
 
     @classmethod
     def rebuild_item(cls, item: HeaderTypes) -> Optional[Headers]:
