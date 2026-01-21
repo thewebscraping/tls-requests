@@ -47,6 +47,7 @@ dev = [
     "werkzeug",
     "tox",
     "pre-commit",
+    "mkautodoc",
     "ruff",
     "mypy",
     "mkdocs-material",
