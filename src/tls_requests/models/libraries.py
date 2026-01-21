@@ -251,19 +251,29 @@ class TLSLibrary:
                 v_tag = version or LATEST_VERSION_TAG_NAME
                 if not v_tag.startswith("v"):
                     v_tag = f"v{v_tag}"
-                v_num = v_tag.lstrip("v")
 
-                target_platform = "ubuntu" if IS_UBUNTU else PLATFORM
                 target_arch = MACHINE
                 if PLATFORM == "windows":
                     if MACHINE == "amd64":
                         target_arch = "64"
                     elif MACHINE == "386":
                         target_arch = "32"
-                direct_filename = f"tls-client-{target_platform}-{target_arch}-{v_num}.{FILE_EXT}"
-                direct_url = f"https://github.com/bogdanfinn/tls-client/releases/download/{v_tag}/{direct_filename}"
-                asset_urls.append(direct_url)
-                logger.info(f"Fallback: generated direct download URL: {direct_url}")
+
+                # Generate a few potential candidates for the fallback URL
+                platforms = [PLATFORM]
+                if IS_UBUNTU:
+                    platforms.insert(0, "ubuntu")
+
+                for plat in platforms:
+                    # Try with 'v' and without 'v' in filename as naming patterns vary
+                    for v_str in [v_tag, v_tag.lstrip("v")]:
+                        direct_filename = f"tls-client-{plat}-{target_arch}-{v_str}.{FILE_EXT}"
+                        direct_url = (
+                            f"https://github.com/bogdanfinn/tls-client/releases/download/{v_tag}/{direct_filename}"
+                        )
+                        asset_urls.append(direct_url)
+
+                logger.info(f"Fallback: generated direct download URLs: {', '.join(asset_urls)}")
 
         for url in ubuntu_urls:
             yield url
@@ -309,47 +319,53 @@ class TLSLibrary:
             )
             download_url = None
             for url in cls.fetch_api(version):
-                if url:
-                    download_url = url
-                    break
+                if not url:
+                    continue
 
-            logger.info("Library Download URL: %s" % download_url)
-            if download_url:
-                destination_name = download_url.split("/")[-1]
-                destination = os.path.join(BIN_DIR, destination_name)
+                download_url = url
+                logger.info("Trying to download library from: %s" % download_url)
 
-                # Use standard library's urllib to download the file
-                with urllib.request.urlopen(download_url, timeout=10) as response:
-                    if response.status != 200:
-                        raise urllib.error.URLError(f"Failed to download file: HTTP {response.status}")
+                try:
+                    destination_name = download_url.split("/")[-1]
+                    destination = os.path.join(BIN_DIR, destination_name)
 
-                    os.makedirs(BIN_DIR, exist_ok=True)
-                    total_size = int(response.headers.get("content-length", 0))
-                    chunk_size = 8192  # 8KB
+                    # Use standard library's urllib to download the file
+                    with urllib.request.urlopen(download_url, timeout=15) as response:
+                        if response.status != 200:
+                            logger.debug(f"Skipping {download_url}: HTTP {response.status}")
+                            continue
 
-                    with open(destination, "wb") as file:
-                        downloaded = 0
-                        while True:
-                            chunk = response.read(chunk_size)
-                            if not chunk:
-                                break
+                        os.makedirs(BIN_DIR, exist_ok=True)
+                        total_size = int(response.headers.get("content-length", 0))
+                        chunk_size = 8192  # 8KB
 
-                            file.write(chunk)
-                            downloaded += len(chunk)
+                        with open(destination, "wb") as file:
+                            downloaded = 0
+                            while True:
+                                chunk = response.read(chunk_size)
+                                if not chunk:
+                                    break
 
-                            # Simple text-based progress bar
-                            if total_size > 0:
-                                percent = downloaded / total_size * 100
-                                bar_length = 50
-                                filled_length = int(bar_length * downloaded // total_size)
-                                bar = "=" * filled_length + "-" * (bar_length - filled_length)
-                                sys.stdout.write(f"\rDownloading {destination_name}: [{bar}] {percent:.1f}%")
-                                sys.stdout.flush()
+                                file.write(chunk)
+                                downloaded += len(chunk)
 
-                return destination
+                                # Simple text-based progress bar
+                                if total_size > 0:
+                                    percent = (downloaded / total_size) * 100
+                                    bar_length = 50
+                                    filled_length = int(bar_length * downloaded // total_size)
+                                    bar = "=" * filled_length + "-" * (bar_length - filled_length)
+                                    sys.stdout.write(f"\rDownloading {destination_name}: [{bar}] {percent:.1f}%")
+                                    sys.stdout.flush()
 
-        except (urllib.error.URLError, urllib.error.HTTPError) as ex:
-            logger.error("Unable to download file: %s" % ex)
+                        sys.stdout.write("\n")
+                        return destination
+                except (urllib.error.URLError, urllib.error.HTTPError) as ex:
+                    logger.debug(f"Failed to download from {download_url}: {ex}")
+                    continue
+
+            logger.error("All download attempts failed.")
+
         except Exception as e:
             logger.error("An unexpected error occurred during download: %s" % e)
         return None
