@@ -115,6 +115,7 @@ TLSIdentifierTypes = Union[
         "zalando_ios_mobile",
     ],
     "TLSIdentifierRotator",
+    str,
 ]
 
 AnyList = List[

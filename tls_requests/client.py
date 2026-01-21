@@ -12,9 +12,10 @@ from .exceptions import ProxyError, RemoteProtocolError, TooManyRedirects
 from .models import (URL, Auth, BasicAuth, Cookies, HeaderRotator, Headers,
                      Proxy, ProxyRotator, Request, Response, StatusCodes,
                      TLSClient, TLSConfig, TLSIdentifierRotator, URLParams)
-from .settings import (DEFAULT_FOLLOW_REDIRECTS, DEFAULT_HEADERS,
-                       DEFAULT_MAX_REDIRECTS, DEFAULT_TIMEOUT,
-                       DEFAULT_TLS_HTTP2, DEFAULT_TLS_IDENTIFIER)
+from .settings import (DEFAULT_FOLLOW_REDIRECTS, DEFAULT_MAX_REDIRECTS,
+                       DEFAULT_TIMEOUT, DEFAULT_TLS_ALLOW_HTTP,
+                       DEFAULT_TLS_HTTP2, DEFAULT_TLS_IDENTIFIER,
+                       DEFAULT_TLS_PROTOCOL_RACING)
 from .types import (AuthTypes, CookieTypes, HeaderTypes, HookTypes,
                     ProtocolTypes, ProxyTypes, RequestData, RequestFiles,
                     TimeoutTypes, TLSIdentifierTypes, URLParamTypes, URLTypes)
@@ -94,12 +95,23 @@ class BaseClient:
         http2: ProtocolTypes = DEFAULT_TLS_HTTP2,
         verify: bool = True,
         client_identifier: Optional[TLSIdentifierTypes] = DEFAULT_TLS_IDENTIFIER,
+        protocol_racing: bool = DEFAULT_TLS_PROTOCOL_RACING,
+        allow_http: bool = DEFAULT_TLS_ALLOW_HTTP,
+        stream_id: Optional[int] = None,
         hooks: HookTypes = None,
         encoding: str = "utf-8",
         **config,
     ) -> None:
         self._session = TLSClient.initialize()
-        self._config = TLSConfig.from_kwargs(**config)
+        self._config = TLSConfig.from_kwargs(
+            http2=http2,
+            verify=verify,
+            tls_identifier=client_identifier,
+            protocol_racing=protocol_racing,
+            allow_http=allow_http,
+            stream_id=stream_id,
+            **config,
+        )
         self._params = URLParams(params)
         self._cookies = Cookies(cookies)
         self._state = ClientState.UNOPENED
@@ -119,11 +131,17 @@ class BaseClient:
         self.max_redirects = max_redirects
         self.http2 = http2
         self.verify = verify
+        self.protocol_racing = protocol_racing
+        self.allow_http = allow_http
+        self.stream_id = stream_id
         self.client_identifier = (
             TLSIdentifierRotator.from_file(client_identifier)
             if isinstance(client_identifier, list)
             else client_identifier
         )
+        self.protocol_racing = protocol_racing
+        self.allow_http = allow_http
+        self.stream_id = stream_id
         self.encoding = encoding
 
     @property
@@ -140,9 +158,6 @@ class BaseClient:
 
     @property
     def headers(self) -> Headers:
-        for k, v in DEFAULT_HEADERS.items():
-            if k not in self._headers:
-                self._headers[k] = v
         return self._headers
 
     @headers.setter
@@ -247,6 +262,10 @@ class BaseClient:
             http2=True if self.http2 in ["auto", "http2", True, None] else False,
             verify=self.verify,
             tls_identifier=tls_identifier,
+            protocol_racing=request.protocol_racing,
+            allow_http=request.allow_http,
+            stream_id=request.stream_id,
+            **getattr(request, "_extra_config", {}),
         )
 
         # Set Request SessionId.
@@ -265,6 +284,10 @@ class BaseClient:
         headers: HeaderTypes = None,
         cookies: CookieTypes = None,
         timeout: TimeoutTypes = None,
+        protocol_racing: bool = None,
+        allow_http: bool = None,
+        stream_id: int = None,
+        **kwargs,
     ) -> Request:
         """Build Request instance"""
 
@@ -279,6 +302,10 @@ class BaseClient:
             cookies=self.prepare_cookies(cookies),
             proxy=self.prepare_proxy(self.proxy),
             timeout=timeout or self.timeout,
+            protocol_racing=protocol_racing if protocol_racing is not None else self.protocol_racing,
+            allow_http=allow_http if allow_http is not None else self.allow_http,
+            stream_id=stream_id if stream_id is not None else self.stream_id,
+            **kwargs,
         )
 
     def build_hook_request(self, request: Request, *args, **kwargs) -> Union[Request, Any]:
@@ -443,6 +470,10 @@ class Client(BaseClient):
         auth: AuthTypes = None,
         follow_redirects: bool = DEFAULT_FOLLOW_REDIRECTS,
         timeout: TimeoutTypes = DEFAULT_TIMEOUT,
+        protocol_racing: bool = None,
+        allow_http: bool = None,
+        stream_id: int = None,
+        **kwargs,
     ):
         """
         Constructs and sends an HTTP request.
@@ -484,6 +515,9 @@ class Client(BaseClient):
             headers=headers,
             cookies=cookies,
             timeout=timeout,
+            protocol_racing=protocol_racing,
+            allow_http=allow_http,
+            stream_id=stream_id,
         )
         return self.send(request, auth=auth, follow_redirects=follow_redirects)
 
@@ -534,6 +568,7 @@ class Client(BaseClient):
         auth: AuthTypes = None,
         follow_redirects: bool = DEFAULT_FOLLOW_REDIRECTS,
         timeout: TimeoutTypes = DEFAULT_TIMEOUT,
+        **kwargs,
     ):
         """
         Send a `GET` request.
@@ -549,6 +584,7 @@ class Client(BaseClient):
             auth=auth,
             follow_redirects=follow_redirects,
             timeout=timeout,
+            **kwargs,
         )
 
     def options(
@@ -561,6 +597,7 @@ class Client(BaseClient):
         auth: AuthTypes = None,
         follow_redirects: bool = DEFAULT_FOLLOW_REDIRECTS,
         timeout: TimeoutTypes = DEFAULT_TIMEOUT,
+        **kwargs,
     ) -> Response:
         """
         Send an `OPTIONS` request.
@@ -576,6 +613,7 @@ class Client(BaseClient):
             auth=auth,
             follow_redirects=follow_redirects,
             timeout=timeout,
+            **kwargs,
         )
 
     def head(
@@ -588,6 +626,7 @@ class Client(BaseClient):
         auth: AuthTypes = None,
         follow_redirects: bool = DEFAULT_FOLLOW_REDIRECTS,
         timeout: TimeoutTypes = DEFAULT_TIMEOUT,
+        **kwargs,
     ) -> Response:
         """
         Send a `HEAD` request.
@@ -603,6 +642,7 @@ class Client(BaseClient):
             auth=auth,
             follow_redirects=follow_redirects,
             timeout=timeout,
+            **kwargs,
         )
 
     def post(
@@ -618,6 +658,7 @@ class Client(BaseClient):
         auth: AuthTypes = None,
         follow_redirects: bool = DEFAULT_FOLLOW_REDIRECTS,
         timeout: TimeoutTypes = DEFAULT_TIMEOUT,
+        **kwargs,
     ) -> Response:
         """
         Send a `POST` request.
@@ -636,6 +677,7 @@ class Client(BaseClient):
             auth=auth,
             follow_redirects=follow_redirects,
             timeout=timeout,
+            **kwargs,
         )
 
     def put(
@@ -651,6 +693,7 @@ class Client(BaseClient):
         auth: AuthTypes = None,
         follow_redirects: bool = DEFAULT_FOLLOW_REDIRECTS,
         timeout: TimeoutTypes = DEFAULT_TIMEOUT,
+        **kwargs,
     ) -> Response:
         """
         Send a `PUT` request.
@@ -669,6 +712,7 @@ class Client(BaseClient):
             auth=auth,
             follow_redirects=follow_redirects,
             timeout=timeout,
+            **kwargs,
         )
 
     def patch(
@@ -684,6 +728,7 @@ class Client(BaseClient):
         auth: AuthTypes = None,
         follow_redirects: bool = DEFAULT_FOLLOW_REDIRECTS,
         timeout: TimeoutTypes = DEFAULT_TIMEOUT,
+        **kwargs,
     ) -> Response:
         """
         Send a `PATCH` request.
@@ -702,6 +747,7 @@ class Client(BaseClient):
             auth=auth,
             follow_redirects=follow_redirects,
             timeout=timeout,
+            **kwargs,
         )
 
     def delete(
@@ -714,6 +760,7 @@ class Client(BaseClient):
         auth: AuthTypes = None,
         follow_redirects: bool = DEFAULT_FOLLOW_REDIRECTS,
         timeout: TimeoutTypes = DEFAULT_TIMEOUT,
+        **kwargs,
     ) -> Response:
         """
         Send a `DELETE` request.
@@ -729,6 +776,7 @@ class Client(BaseClient):
             auth=auth,
             follow_redirects=follow_redirects,
             timeout=timeout,
+            **kwargs,
         )
 
 
@@ -794,6 +842,10 @@ class AsyncClient(BaseClient):
         headers: HeaderTypes = None,
         cookies: CookieTypes = None,
         timeout: TimeoutTypes = None,
+        protocol_racing: bool = None,
+        allow_http: bool = None,
+        stream_id: int = None,
+        **kwargs,
     ) -> Request:
         headers = await self.aprepare_headers(headers)
         proxy = await self.aprepare_proxy(self.proxy)
@@ -808,6 +860,10 @@ class AsyncClient(BaseClient):
             cookies=self.prepare_cookies(cookies),
             proxy=proxy,
             timeout=timeout or self.timeout,
+            protocol_racing=protocol_racing if protocol_racing is not None else self.protocol_racing,
+            allow_http=allow_http if allow_http is not None else self.allow_http,
+            stream_id=stream_id if stream_id is not None else self.stream_id,
+            **kwargs,
         )
 
     async def request(
@@ -824,6 +880,10 @@ class AsyncClient(BaseClient):
         auth: AuthTypes = None,
         follow_redirects: bool = DEFAULT_FOLLOW_REDIRECTS,
         timeout: TimeoutTypes = DEFAULT_TIMEOUT,
+        protocol_racing: bool = None,
+        allow_http: bool = None,
+        stream_id: int = None,
+        **kwargs,
     ) -> Response:
         """Async Request"""
 
@@ -837,6 +897,9 @@ class AsyncClient(BaseClient):
             headers=headers,
             cookies=cookies,
             timeout=timeout,
+            protocol_racing=protocol_racing,
+            allow_http=allow_http,
+            stream_id=stream_id,
         )
         return await self.send(request, auth=auth, follow_redirects=follow_redirects)
 
@@ -850,6 +913,7 @@ class AsyncClient(BaseClient):
         auth: AuthTypes = None,
         follow_redirects: bool = DEFAULT_FOLLOW_REDIRECTS,
         timeout: TimeoutTypes = DEFAULT_TIMEOUT,
+        **kwargs,
     ) -> Response:
         """
         Send a `GET` request.
@@ -865,6 +929,7 @@ class AsyncClient(BaseClient):
             auth=auth,
             follow_redirects=follow_redirects,
             timeout=timeout,
+            **kwargs,
         )
 
     async def options(
@@ -877,6 +942,7 @@ class AsyncClient(BaseClient):
         auth: AuthTypes = None,
         follow_redirects: bool = DEFAULT_FOLLOW_REDIRECTS,
         timeout: TimeoutTypes = DEFAULT_TIMEOUT,
+        **kwargs,
     ) -> Response:
         """
         Send an `OPTIONS` request.
@@ -892,6 +958,7 @@ class AsyncClient(BaseClient):
             auth=auth,
             follow_redirects=follow_redirects,
             timeout=timeout,
+            **kwargs,
         )
 
     async def head(
@@ -904,6 +971,7 @@ class AsyncClient(BaseClient):
         auth: AuthTypes = None,
         follow_redirects: bool = DEFAULT_FOLLOW_REDIRECTS,
         timeout: TimeoutTypes = DEFAULT_TIMEOUT,
+        **kwargs,
     ) -> Response:
         """
         Send a `HEAD` request.
@@ -919,6 +987,7 @@ class AsyncClient(BaseClient):
             auth=auth,
             follow_redirects=follow_redirects,
             timeout=timeout,
+            **kwargs,
         )
 
     async def post(
@@ -934,6 +1003,7 @@ class AsyncClient(BaseClient):
         auth: AuthTypes = None,
         follow_redirects: bool = DEFAULT_FOLLOW_REDIRECTS,
         timeout: TimeoutTypes = DEFAULT_TIMEOUT,
+        **kwargs,
     ) -> Response:
         """
         Send a `POST` request.
@@ -952,6 +1022,7 @@ class AsyncClient(BaseClient):
             auth=auth,
             follow_redirects=follow_redirects,
             timeout=timeout,
+            **kwargs,
         )
 
     async def put(
@@ -967,6 +1038,7 @@ class AsyncClient(BaseClient):
         auth: AuthTypes = None,
         follow_redirects: bool = DEFAULT_FOLLOW_REDIRECTS,
         timeout: TimeoutTypes = DEFAULT_TIMEOUT,
+        **kwargs,
     ) -> Response:
         """
         Send a `PUT` request.
@@ -985,6 +1057,7 @@ class AsyncClient(BaseClient):
             auth=auth,
             follow_redirects=follow_redirects,
             timeout=timeout,
+            **kwargs,
         )
 
     async def patch(
@@ -1000,6 +1073,7 @@ class AsyncClient(BaseClient):
         auth: AuthTypes = None,
         follow_redirects: bool = DEFAULT_FOLLOW_REDIRECTS,
         timeout: TimeoutTypes = DEFAULT_TIMEOUT,
+        **kwargs,
     ) -> Response:
         """
         Send a `PATCH` request.
@@ -1018,6 +1092,7 @@ class AsyncClient(BaseClient):
             auth=auth,
             follow_redirects=follow_redirects,
             timeout=timeout,
+            **kwargs,
         )
 
     async def delete(
@@ -1030,6 +1105,7 @@ class AsyncClient(BaseClient):
         auth: AuthTypes = None,
         follow_redirects: bool = DEFAULT_FOLLOW_REDIRECTS,
         timeout: TimeoutTypes = DEFAULT_TIMEOUT,
+        **kwargs,
     ) -> Response:
         """
         Send a `DELETE` request.
@@ -1045,6 +1121,7 @@ class AsyncClient(BaseClient):
             auth=auth,
             follow_redirects=follow_redirects,
             timeout=timeout,
+            **kwargs,
         )
 
     async def send(
