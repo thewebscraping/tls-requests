@@ -439,4 +439,7 @@ class TLSLibrary:
 
 
 if __name__ == "__main__":
-    TLSLibrary.update()
+    try:
+        TLSLibrary.load()
+    except Exception as ex:
+        logger.error(f"Manual load test failed: {ex}")

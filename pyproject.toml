@@ -38,6 +38,17 @@ dependencies = [
     "chardet~=5.2.0",
 ]
 
+[dependency-groups]
+dev = [
+    "pytest",
+    "pytest-asyncio",
+    "ruff",
+    "mypy",
+    "mkdocs-material",
+    "mkdocs",
+    "mkdocstrings[python]",
+]
+
 [project.urls]
 Sponsor = "https://github.com/sponsors/thewebscraping"
 Changelog = "https://github.com/thewebscraping/tls-requests/blob/main/CHANGELOG.md"
