@@ -46,12 +46,12 @@ pip install git+https://github.com/thewebscraping/tls-requests.git
 
 Start using TLS Requests with just a few lines of code:
 
-```pycon
->>> import tls_requests
->>> r = tls_requests.get("https://httpbin.org/get")
->>> r
+```python
+import tls_requests
+r = tls_requests.get("https://httpbin.org/get")
+r
 <Response [200 OK]>
->>> r.status_code
+r.status_code
 200
 ```
 
@@ -88,10 +88,10 @@ Modern websites increasingly use **TLS Fingerprinting** and anti-bot tools like 
 
 **Example Code:**
 
-```pycon
->>> import tls_requests
->>> r = tls_requests.get('https://www.coingecko.com/')
->>> r
+```python
+import tls_requests
+r = tls_requests.get('https://www.coingecko.com/')
+r
 <Response [200]>
 ```
 * * *

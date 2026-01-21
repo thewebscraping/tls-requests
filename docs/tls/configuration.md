@@ -58,15 +58,7 @@ advanced_config = {
         "MAX_HEADER_LIST_SIZE": 262144
     },
     "ja3String": "771,4865-4866-4867-49195-49199-49196-49200-52393-52392,0-23-65281-10-11-35-16-5-13-18-51-45-43-27-21,29-23-24,0",
-    "keyShareCurves": ["X25519"]
-}
-
-custom_config = tls_requests.CustomTLSClientConfig(**advanced_config)
-# Pass this to your TLSConfig
-```
-
-By leveraging these configuration classes, you can achieve highly specific TLS fingerprints to match any browser or specialized client requirement.
-    ],
+    "keyShareCurves": ["X25519"],
     "priorityFrames": [],
     "pseudoHeaderOrder": [
         ":method",
@@ -90,55 +82,55 @@ By leveraging these configuration classes, you can achieve highly specific TLS f
         "1.2"
     ]
 }
->>> custom_tls_client = tls_requests.tls.CustomTLSClientConfig.from_kwargs(**kwargs)
->>> config_obj = tls_requests.tls.TLSConfig(customTlsClient=custom_tls_client, tlsClientIdentifier=None)
->>> config_kwargs = config_obj.to_dict()
->>> r = tls_requests.get("https://httpbin.org/get", **config_kwargs)
->>> r
-<Response [200 OK]>
+
+custom_config = tls_requests.CustomTLSClientConfig(**advanced_config)
+# Pass this to your TLSConfig
+config_obj = tls_requests.TLSConfig(customTlsClient=custom_config)
+response = tls_requests.get("https://httpbin.org/get", **config_obj.to_dict())
 ```
+
+By leveraging these configuration classes, you can achieve highly specific TLS fingerprints to match any browser or specialized client requirement.
 
 !!! note
     When using `CustomTLSClientConfig`, the `tlsClientIdentifier` parameter in TLSConfig is set to None.
 
 ### Passing Request Parameters Directly
 
-```pycon
->>> import tls_requests
->>> r = tls_requests.get(
-        url = "https://httpbin.org/get",
-        proxy = "http://127.0.0.1:8080",
-        http2 = True,
-        timeout = 10.0,
-        follow_redirects = True,
-        verify = True,
-        client_identifier = "chrome_120",
-        **config,
-    )
->>> r
+```python
+import tls_requests
+r = tls_requests.get(
+    url = "https://httpbin.org/get",
+    proxy = "http://127.0.0.1:8080",
+    http2 = True,
+    timeout = 10.0,
+    follow_redirects = True,
+    verify = True,
+    client_identifier = "chrome_120",
+    **config_obj.to_dict(),
+)
+r
 <Response [200 OK]>
 ```
 
 !!! note
-    When using the `customTlsClient` parameter within `**config`, the `client_identifier` parameter will not be set.
+    When using the `customTlsClient` parameter within `**config_obj.to_dict()`, the `client_identifier` parameter will not be set.
     Parameters such as `headers`, `cookies`, `proxy`, `timeout`, `verify`, and `client_identifier` will override the existing configuration in TLSConfig.
 
 ### `Client` and `AsyncClient` Parameters
-```pycon
->>> import tls_requests
->>> client = tls_requests.Client(
-        proxy = "http://127.0.0.1:8080",
-        http2 = True,
-        timeout = 10.0,
-        follow_redirects = True,
-        verify = True,
-        client_identifier = "chrome_120",
-        **config,
-    )
->>> r = client.get(url = "https://httpbin.org/get",)
->>> r
+```python
+import tls_requests
+client = tls_requests.Client(
+    proxy = "http://127.0.0.1:8080",
+    http2 = True,
+    timeout = 10.0,
+    follow_redirects = True,
+    verify = True,
+    client_identifier = "chrome_120",
+    **config_obj.to_dict(),
+)
+r = client.get(url = "https://httpbin.org/get",)
+r
 <Response [200 OK]>
-
 ```
 
 !!! note

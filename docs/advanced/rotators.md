@@ -29,22 +29,22 @@ with tls_requests.Client(headers=tls_requests.HeaderRotator()) as client:
 **How to Override the Default Behavior:**
 
 -   **To rotate through your own list of headers**, pass a `list` of `dict`s:
-    ```python
-    my_headers = [{"User-Agent": "MyBot/1.0"}, {"User-Agent": "MyBot/2.0"}]
-    client = tls_requests.Client(headers=my_headers)
-    ```
+```python
+my_headers = [{"User-Agent": "MyBot/1.0"}, {"User-Agent": "MyBot/2.0"}]
+client = tls_requests.Client(headers=my_headers)
+```
 
 -   **To use a single, static set of headers (no rotation)**, pass a single `dict`:
-    ```python
-    static_headers = {"User-Agent": "Always-The-Same-Bot/1.0"}
-    client = tls_requests.Client(headers=static_headers)
-    ```
+```python
+static_headers = {"User-Agent": "Always-The-Same-Bot/1.0"}
+client = tls_requests.Client(headers=static_headers)
+```
 
 -   **To completely disable default headers**, pass `None`:
-    ```python
-    # This client will not add any default headers (like User-Agent).
-    client = tls_requests.Client(headers=None)
-    ```
+```python
+# This client will not add any default headers (like User-Agent).
+client = tls_requests.Client(headers=None)
+```
 
 * * *
 

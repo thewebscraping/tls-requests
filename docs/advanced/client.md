@@ -87,6 +87,12 @@ The client supports all standard HTTP methods:
 - `client.options(url, **kwargs)`
 
 For more advanced scenarios like custom authentication or request hooks, refer to the dedicated guides in the [Advanced](../advanced/authentication.md) section.
+
+*   **Merging Headers and Cookies:**
+    Request-level values will override client-level values if there is a conflict.
+
+```python
+client_headers = {'X-Auth': 'client'}
 request_headers = {'X-Custom': 'request'}
 with tls_requests.Client(headers=client_headers) as client:
     response = client.get("https://httpbin.org/get", headers=request_headers)
@@ -99,14 +105,12 @@ with tls_requests.Client(headers=client_headers) as client:
 ```python
 with tls_requests.Client(auth=('user', 'pass')) as client:
     response = client.get("https://httpbin.org/get", auth=('admin', 'adminpass'))
-    print(response.request.headers['Authorization'])  # Encoded 'admin:adminpass'
-
+    # Authorization header would be encoded 'admin:adminpass'
 ```
 
 * * *
 
-Advanced Request Handling
--------------------------
+## Advanced Request Handling
 
 For more control, explicitly build and send `Request` instances:
 
@@ -122,15 +126,15 @@ To combine client- and request-level configurations:
 ```python
 with tls_requests.Client(headers={"X-Client-ID": "ABC123"}) as client:
     request = client.build_request("GET", "https://httpbin.org/json")
-    del request.headers["X-Client-ID"]  # Modify as needed
+    # request.headers["X-Client-ID"] is present, but you can modify it
+    del request.headers["X-Client-ID"]
     response = client.send(request)
     print(response)
 ```
 
 * * *
 
-File Uploads
-------------
+## File Uploads
 
 Upload files with control over file name, content, and MIME type:
 

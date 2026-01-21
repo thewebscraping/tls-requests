@@ -36,33 +36,33 @@ pip install git+https://github.com/thewebscraping/tls-requests.git
 
 Start using TLS Requests with just a few lines of code. It automatically synchronizes headers based on your chosen browser identifier:
 
-```pycon
->>> import tls_requests
->>> # The library automatically injects matching User-Agent and Sec-CH-UA headers
->>> r = tls_requests.get("https://httpbin.org/headers", client_identifier="chrome_133")
->>> r.json()["headers"]["User-Agent"]
+```python
+import tls_requests
+# The library automatically injects matching User-Agent and Sec-CH-UA headers
+r = tls_requests.get("https://httpbin.org/headers", client_identifier="chrome_133")
+r.json()["headers"]["User-Agent"]
 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/133.0.0.0 Safari/537.36'
 ```
 
 Basic automatically rotates for proxies and TLS identifiers:
 
-```pycon
->>> import tls_requests
->>> proxy_rotator = tls_requests.ProxyRotator([
+```python
+import tls_requests
+proxy_rotator = tls_requests.ProxyRotator([
     "http://user1:pass1@proxy.example.com:8080",
     "http://user2:pass2@proxy.example.com:8081",
     "socks5://proxy.example.com:8082",
     "proxy.example.com:8083",  # defaults to http
     "http://user:pass@proxy.example.com:8084|1.0|US",  # weight and region support
 ])
->>> r = tls_requests.get(
+r = tls_requests.get(
     "https://httpbin.org/get",
     proxy=proxy_rotator,
     client_identifier=tls_requests.TLSIdentifierRotator()
 )
->>> r
+r
 <Response [200 OK]>
->>> r.status_code
+r.status_code
 200
 ```
 
@@ -97,10 +97,10 @@ making it easy to scrape data or interact with websites that use sophisticated a
 
 **Example Code:**
 
-```pycon
->>> import tls_requests
->>> r = tls_requests.get('https://www.coingecko.com/')
->>> r
+```python
+import tls_requests
+r = tls_requests.get('https://www.coingecko.com/')
+r
 <Response [200]>
 ```
 
@@ -110,7 +110,7 @@ making it easy to scrape data or interact with websites that use sophisticated a
 ### **Enhanced Capabilities**
 
 *   **Browser-like TLS Fingerprinting**: Enables secure and reliable browser-mimicking connections.
-*   **Dynamic Header Synchronization**: Automatically extracts browser versions from `tls_identifier` and injects them into `User-Agent` and `sec-ch-ua` headers.
+*   **Dynamic Header Synchronization**: Automatically extracts browser versions from `client_identifier` and injects them into `User-Agent` and `sec-ch-ua` headers.
 *   **High-Performance Backend**: Built on a Go-based HTTP backend with **Protocol Racing** (Happy Eyeballs) enabled by default for faster connections.
 *   **Synchronous & Asynchronous Support**: Seamlessly switch between synchronous and asynchronous requests.
 *   **Protocol Support**: Fully compatible with HTTP/1.1, HTTP/2, and HTTP/3 (Alpha).

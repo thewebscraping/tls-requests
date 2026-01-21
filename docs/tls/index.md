@@ -98,9 +98,9 @@ TLSClient.destroy_session(session_id="my-session-123")
     *   `session_id` (_TLSSessionId_): The identifier for the session to be destroyed.
 *   **Returns**: `True` if the session was successfully destroyed, otherwise `False`.
 
-```pycon
->>> from tls_requests import TLSClient
->>> TLSClient.initialize()
+```python
+from tls_requests import TLSClient
+TLSClient.initialize()
 success = TLSClient.destroy_session(session_id="session123")
 ```
 
@@ -115,10 +115,10 @@ Frees memory associated with a specific response.
     *   `response_id` (_str_): The identifier for the response to be freed.
 *   **Returns**: None.
 
-```pycon
->>> from tls_requests import TLSClient
->>> TLSClient.initialize()
->>> TLSClient.free_memory(response_id="response123")
+```python
+from tls_requests import TLSClient
+TLSClient.initialize()
+TLSClient.free_memory(response_id="response123")
 ```
 
 * * *
@@ -131,11 +131,11 @@ Sends a request using the TLS library. Using [TLSConfig](configuration) to gener
     *   `payload` (_dict_): A dictionary containing the request payload (e.g., method, headers, body, etc.).
 *   **Returns**: The response object from the library.
 
-```pycon
->>> from tls_requests import TLSClient, TLSConfig
->>> TLSClient.initialize()
->>> config = TLSConfig(requestMethod="GET", requestUrl="https://httpbin.org/get")
->>> response = TLSClient.request(config.to_dict())
+```python
+from tls_requests import TLSClient, TLSConfig
+TLSClient.initialize()
+config = TLSConfig(requestMethod="GET", requestUrl="https://httpbin.org/get")
+response = TLSClient.request(config.to_dict())
 ```
 
 * * *
@@ -148,8 +148,8 @@ Parses a raw byte response and frees associated memory.
     *   `raw` (_bytes_): The raw byte response from the TLS library.
 *   **Returns**: A `TLSResponse` object.
 
-```pycon
->>> from tls_requests import TLSClient
->>> TLSClient.initialize()
->>> parsed_response = TLSClient.response(raw_bytes)
+```python
+from tls_requests import TLSClient
+TLSClient.initialize()
+parsed_response = TLSClient.response(raw_bytes)
 ```

@@ -69,6 +69,7 @@ The `AsyncClient` mirrors the `Client` API but requires the `await` keyword for 
 
 ### Async Methods
 All request methods are coroutines:
+
 - `await client.get(url, ...)`
 - `await client.post(url, ...)`
 - `await client.put(url, ...)`
