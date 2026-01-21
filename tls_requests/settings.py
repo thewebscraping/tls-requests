@@ -1,18 +1,49 @@
 from __future__ import annotations
 
-from .__version__ import __version__
-
 CHUNK_SIZE = 65_536
 DEFAULT_TIMEOUT = 30.0
 DEFAULT_MAX_REDIRECTS = 9
 DEFAULT_FOLLOW_REDIRECTS = True
 DEFAULT_TLS_DEBUG = False
+DEFAULT_TLS_PROTOCOL_RACING = True
+DEFAULT_TLS_ALLOW_HTTP = False
 DEFAULT_TLS_INSECURE_SKIP_VERIFY = False
 DEFAULT_TLS_HTTP2 = "auto"
 DEFAULT_TLS_IDENTIFIER = "chrome_133"
-DEFAULT_HEADERS = {
-    "accept": "*/*",
-    "connection": "keep-alive",
-    "user-agent": f"Python-TLS-Requests/{__version__}",
-    "accept-encoding": "gzip, deflate, br, zstd",
+
+BROWSER_HEADERS = {
+    "chrome": {
+        "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/133.0.0.0 Safari/537.36",
+        "accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7",
+        "accept-language": "en-US,en;q=0.9",
+        "accept-encoding": "gzip, deflate, br, zstd",
+        "sec-ch-ua": '"Not(A:Brand";v="99", "Google Chrome";v="133", "Chromium";v="133"',
+        "sec-ch-ua-mobile": "?0",
+        "sec-ch-ua-platform": '"Windows"',
+        "sec-fetch-dest": "document",
+        "sec-fetch-mode": "navigate",
+        "sec-fetch-site": "none",
+        "sec-fetch-user": "?1",
+        "upgrade-insecure-requests": "1",
+    },
+    "firefox": {
+        "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:133.0) Gecko/20100101 Firefox/133.0",
+        "accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
+        "accept-language": "en-US,en;q=0.5",
+        "accept-encoding": "gzip, deflate, br, zstd",
+        "upgrade-insecure-requests": "1",
+        "sec-fetch-dest": "document",
+        "sec-fetch-mode": "navigate",
+        "sec-fetch-site": "none",
+        "sec-fetch-user": "?1",
+    },
+    "safari": {
+        "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Safari/605.1.15",
+        "accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+        "accept-language": "en-US,en;q=0.9",
+        "accept-encoding": "gzip, deflate, br",
+        "sec-fetch-dest": "document",
+        "sec-fetch-mode": "navigate",
+        "sec-fetch-site": "none",
+    }
 }

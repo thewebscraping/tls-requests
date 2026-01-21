@@ -5,7 +5,8 @@ import typing
 from .client import Client
 from .models import Response
 from .settings import (DEFAULT_FOLLOW_REDIRECTS, DEFAULT_TIMEOUT,
-                       DEFAULT_TLS_HTTP2, DEFAULT_TLS_IDENTIFIER)
+                       DEFAULT_TLS_ALLOW_HTTP, DEFAULT_TLS_HTTP2,
+                       DEFAULT_TLS_IDENTIFIER, DEFAULT_TLS_PROTOCOL_RACING)
 from .types import (AuthTypes, CookieTypes, HeaderTypes, MethodTypes,
                     ProtocolTypes, ProxyTypes, RequestData, RequestFiles,
                     TimeoutTypes, TLSIdentifierTypes, URLParamTypes, URLTypes)
@@ -39,6 +40,9 @@ def request(
     follow_redirects: bool = DEFAULT_FOLLOW_REDIRECTS,
     verify: bool = True,
     tls_identifier: TLSIdentifierTypes = DEFAULT_TLS_IDENTIFIER,
+    protocol_racing: bool = DEFAULT_TLS_PROTOCOL_RACING,
+    allow_http: bool = DEFAULT_TLS_ALLOW_HTTP,
+    stream_id: typing.Optional[int] = None,
     **config,
 ) -> Response:
     """
@@ -81,6 +85,9 @@ def request(
         timeout=timeout,
         verify=verify,
         client_identifier=tls_identifier,
+        protocol_racing=protocol_racing,
+        allow_http=allow_http,
+        stream_id=stream_id,
         **config,
     ) as client:
         return client.request(
@@ -94,6 +101,9 @@ def request(
             auth=auth,
             follow_redirects=follow_redirects,
             timeout=timeout,
+            protocol_racing=protocol_racing,
+            allow_http=allow_http,
+            stream_id=stream_id,
         )
 
 
@@ -110,6 +120,9 @@ def get(
     follow_redirects: bool = DEFAULT_FOLLOW_REDIRECTS,
     verify: bool = True,
     tls_identifier: TLSIdentifierTypes = DEFAULT_TLS_IDENTIFIER,
+    protocol_racing: bool = DEFAULT_TLS_PROTOCOL_RACING,
+    allow_http: bool = DEFAULT_TLS_ALLOW_HTTP,
+    stream_id: typing.Optional[int] = None,
     **config,
 ) -> Response:
     """
@@ -133,6 +146,9 @@ def get(
         timeout=timeout,
         verify=verify,
         tls_identifier=tls_identifier,
+        protocol_racing=protocol_racing,
+        allow_http=allow_http,
+        stream_id=stream_id,
         **config,
     )
 
@@ -150,6 +166,9 @@ def options(
     follow_redirects: bool = DEFAULT_FOLLOW_REDIRECTS,
     verify: bool = True,
     tls_identifier: TLSIdentifierTypes = DEFAULT_TLS_IDENTIFIER,
+    protocol_racing: bool = DEFAULT_TLS_PROTOCOL_RACING,
+    allow_http: bool = DEFAULT_TLS_ALLOW_HTTP,
+    stream_id: typing.Optional[int] = None,
     **config,
 ) -> Response:
     """
@@ -173,6 +192,9 @@ def options(
         timeout=timeout,
         verify=verify,
         tls_identifier=tls_identifier,
+        protocol_racing=protocol_racing,
+        allow_http=allow_http,
+        stream_id=stream_id,
         **config,
     )
 
@@ -190,6 +212,9 @@ def head(
     follow_redirects: bool = DEFAULT_FOLLOW_REDIRECTS,
     verify: bool = True,
     tls_identifier: TLSIdentifierTypes = DEFAULT_TLS_IDENTIFIER,
+    protocol_racing: bool = DEFAULT_TLS_PROTOCOL_RACING,
+    allow_http: bool = DEFAULT_TLS_ALLOW_HTTP,
+    stream_id: typing.Optional[int] = None,
     **config,
 ) -> Response:
     """
@@ -213,6 +238,9 @@ def head(
         follow_redirects=follow_redirects,
         verify=verify,
         tls_identifier=tls_identifier,
+        protocol_racing=protocol_racing,
+        allow_http=allow_http,
+        stream_id=stream_id,
         **config,
     )
 
@@ -233,6 +261,9 @@ def post(
     follow_redirects: bool = DEFAULT_FOLLOW_REDIRECTS,
     verify: bool = True,
     tls_identifier: TLSIdentifierTypes = DEFAULT_TLS_IDENTIFIER,
+    protocol_racing: bool = DEFAULT_TLS_PROTOCOL_RACING,
+    allow_http: bool = DEFAULT_TLS_ALLOW_HTTP,
+    stream_id: typing.Optional[int] = None,
     **config,
 ) -> Response:
     """
@@ -256,6 +287,9 @@ def post(
         follow_redirects=follow_redirects,
         verify=verify,
         tls_identifier=tls_identifier,
+        protocol_racing=protocol_racing,
+        allow_http=allow_http,
+        stream_id=stream_id,
         **config,
     )
 
@@ -276,6 +310,9 @@ def put(
     follow_redirects: bool = DEFAULT_FOLLOW_REDIRECTS,
     verify: bool = True,
     tls_identifier: TLSIdentifierTypes = DEFAULT_TLS_IDENTIFIER,
+    protocol_racing: bool = DEFAULT_TLS_PROTOCOL_RACING,
+    allow_http: bool = DEFAULT_TLS_ALLOW_HTTP,
+    stream_id: typing.Optional[int] = None,
     **config,
 ) -> Response:
     """
@@ -299,6 +336,9 @@ def put(
         follow_redirects=follow_redirects,
         verify=verify,
         tls_identifier=tls_identifier,
+        protocol_racing=protocol_racing,
+        allow_http=allow_http,
+        stream_id=stream_id,
         **config,
     )
 
@@ -319,6 +359,9 @@ def patch(
     follow_redirects: bool = DEFAULT_FOLLOW_REDIRECTS,
     verify: bool = True,
     tls_identifier: TLSIdentifierTypes = DEFAULT_TLS_IDENTIFIER,
+    protocol_racing: bool = DEFAULT_TLS_PROTOCOL_RACING,
+    allow_http: bool = DEFAULT_TLS_ALLOW_HTTP,
+    stream_id: typing.Optional[int] = None,
     **config,
 ) -> Response:
     """
@@ -342,6 +385,9 @@ def patch(
         follow_redirects=follow_redirects,
         verify=verify,
         tls_identifier=tls_identifier,
+        protocol_racing=protocol_racing,
+        allow_http=allow_http,
+        stream_id=stream_id,
         **config,
     )
 
@@ -359,6 +405,9 @@ def delete(
     follow_redirects: bool = DEFAULT_FOLLOW_REDIRECTS,
     verify: bool = True,
     tls_identifier: TLSIdentifierTypes = DEFAULT_TLS_IDENTIFIER,
+    protocol_racing: bool = DEFAULT_TLS_PROTOCOL_RACING,
+    allow_http: bool = DEFAULT_TLS_ALLOW_HTTP,
+    stream_id: typing.Optional[int] = None,
     **config,
 ) -> Response:
     """
@@ -382,5 +431,8 @@ def delete(
         follow_redirects=follow_redirects,
         verify=verify,
         tls_identifier=tls_identifier,
+        protocol_racing=protocol_racing,
+        allow_http=allow_http,
+        stream_id=stream_id,
         **config,
     )

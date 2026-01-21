@@ -18,8 +18,9 @@ logger = get_logger("TLSLibrary")
 
 __all__ = ["TLSLibrary"]
 
-LATEST_VERSION_TAG_NAME = "v1.11.2"
+LATEST_VERSION_TAG_NAME = "v1.13.1"
 BIN_DIR = os.path.join(Path(__file__).resolve(strict=True).parent.parent / "bin")
+RELEASE_CONFIG_PATH = os.path.join(BIN_DIR, "release.json")
 GITHUB_API_URL = "https://api.github.com/repos/bogdanfinn/tls-client/releases"
 PLATFORM = sys.platform
 IS_UBUNTU = False
@@ -135,96 +136,6 @@ class TLSLibrary:
 
     _PATH: str = None
     _LIBRARY: Optional[ctypes.CDLL] = None
-    _STATIC_API_DATA = {
-        "name": "v1.11.2",
-        "tag_name": "v1.11.2",
-        "assets": [
-            {
-                "browser_download_url": "https://github.com/bogdanfinn/tls-client/releases/download/v1.11.2/tls-client-darwin-amd64-1.11.2.dylib",
-                "name": "tls-client-darwin-amd64-1.11.2.dylib",
-            },
-            {
-                "browser_download_url": "https://github.com/bogdanfinn/tls-client/releases/download/v1.11.2/tls-client-darwin-arm64-1.11.2.dylib",
-                "name": "tls-client-darwin-arm64-1.11.2.dylib",
-            },
-            {
-                "browser_download_url": "https://github.com/bogdanfinn/tls-client/releases/download/v1.11.2/tls-client-linux-alpine-amd64-1.11.2.so",
-                "name": "tls-client-linux-alpine-amd64-1.11.2.so",
-            },
-            {
-                "browser_download_url": "https://github.com/bogdanfinn/tls-client/releases/download/v1.11.2/tls-client-linux-arm64-1.11.2.so",
-                "name": "tls-client-linux-arm64-1.11.2.so",
-            },
-            {
-                "browser_download_url": "https://github.com/bogdanfinn/tls-client/releases/download/v1.11.2/tls-client-linux-armv7-1.11.2.so",
-                "name": "tls-client-linux-armv7-1.11.2.so",
-            },
-            {
-                "browser_download_url": "https://github.com/bogdanfinn/tls-client/releases/download/v1.11.2/tls-client-linux-ubuntu-amd64-1.11.2.so",
-                "name": "tls-client-linux-ubuntu-amd64-1.11.2.so",
-            },
-            {
-                "browser_download_url": "https://github.com/bogdanfinn/tls-client/releases/download/v1.11.2/tls-client-windows-32-1.11.2.dll",
-                "name": "tls-client-windows-32-1.11.2.dll",
-            },
-            {
-                "browser_download_url": "https://github.com/bogdanfinn/tls-client/releases/download/v1.11.2/tls-client-windows-64-1.11.2.dll",
-                "name": "tls-client-windows-64-1.11.2.dll",
-            },
-            {
-                "browser_download_url": "https://github.com/bogdanfinn/tls-client/releases/download/v1.11.2/tls-client-xgo-1.11.2-darwin-amd64.dylib",
-                "name": "tls-client-xgo-1.11.2-darwin-amd64.dylib",
-            },
-            {
-                "browser_download_url": "https://github.com/bogdanfinn/tls-client/releases/download/v1.11.2/tls-client-xgo-1.11.2-darwin-arm64.dylib",
-                "name": "tls-client-xgo-1.11.2-darwin-arm64.dylib",
-            },
-            {
-                "browser_download_url": "https://github.com/bogdanfinn/tls-client/releases/download/v1.11.2/tls-client-xgo-1.11.2-linux-386.so",
-                "name": "tls-client-xgo-1.11.2-linux-386.so",
-            },
-            {
-                "browser_download_url": "https://github.com/bogdanfinn/tls-client/releases/download/v1.11.2/tls-client-xgo-1.11.2-linux-amd64.so",
-                "name": "tls-client-xgo-1.11.2-linux-amd64.so",
-            },
-            {
-                "browser_download_url": "https://github.com/bogdanfinn/tls-client/releases/download/v1.11.2/tls-client-xgo-1.11.2-linux-arm-5.so",
-                "name": "tls-client-xgo-1.11.2-linux-arm-5.so",
-            },
-            {
-                "browser_download_url": "https://github.com/bogdanfinn/tls-client/releases/download/v1.11.2/tls-client-xgo-1.11.2-linux-arm-6.so",
-                "name": "tls-client-xgo-1.11.2-linux-arm-6.so",
-            },
-            {
-                "browser_download_url": "https://github.com/bogdanfinn/tls-client/releases/download/v1.11.2/tls-client-xgo-1.11.2-linux-arm-7.so",
-                "name": "tls-client-xgo-1.11.2-linux-arm-7.so",
-            },
-            {
-                "browser_download_url": "https://github.com/bogdanfinn/tls-client/releases/download/v1.11.2/tls-client-xgo-1.11.2-linux-arm64.so",
-                "name": "tls-client-xgo-1.11.2-linux-arm64.so",
-            },
-            {
-                "browser_download_url": "https://github.com/bogdanfinn/tls-client/releases/download/v1.11.2/tls-client-xgo-1.11.2-linux-ppc64le.so",
-                "name": "tls-client-xgo-1.11.2-linux-ppc64le.so",
-            },
-            {
-                "browser_download_url": "https://github.com/bogdanfinn/tls-client/releases/download/v1.11.2/tls-client-xgo-1.11.2-linux-riscv64.so",
-                "name": "tls-client-xgo-1.11.2-linux-riscv64.so",
-            },
-            {
-                "browser_download_url": "https://github.com/bogdanfinn/tls-client/releases/download/v1.11.2/tls-client-xgo-1.11.2-linux-s390x.so",
-                "name": "tls-client-xgo-1.11.2-linux-s390x.so",
-            },
-            {
-                "browser_download_url": "https://github.com/bogdanfinn/tls-client/releases/download/v1.11.2/tls-client-xgo-1.11.2-windows-386.dll",
-                "name": "tls-client-xgo-1.11.2-windows-386.dll",
-            },
-            {
-                "browser_download_url": "https://github.com/bogdanfinn/tls-client/releases/download/v1.11.2/tls-client-xgo-1.11.2-windows-amd64.dll",
-                "name": "tls-client-xgo-1.11.2-windows-amd64.dll",
-            },
-        ],
-    }
 
     @staticmethod
     def _parse_version(version_string: str) -> Tuple[int, ...]:
@@ -259,35 +170,94 @@ class TLSLibrary:
                     logger.error(f"Error removing old library file {file_path}: {e}")
 
     @classmethod
+    def import_config(cls) -> Optional[dict]:
+        """Loads release data from local disk."""
+        if os.path.exists(RELEASE_CONFIG_PATH):
+            try:
+                with open(RELEASE_CONFIG_PATH, "r", encoding="utf-8") as f:
+                    return json.load(f)
+            except Exception as e:
+                logger.error(f"Error loading local release config: {e}")
+        return None
+
+    @classmethod
+    def export_config(cls, data: dict):
+        """Saves release data to local disk."""
+        try:
+            os.makedirs(BIN_DIR, exist_ok=True)
+            with open(RELEASE_CONFIG_PATH, "w", encoding="utf-8") as f:
+                json.dump(data, f, indent=4)
+            logger.info(f"Saved release config to {RELEASE_CONFIG_PATH}")
+        except Exception as e:
+            logger.error(f"Error saving local release config: {e}")
+
+    @classmethod
     def fetch_api(cls, version: str = None, retries: int = 3):
-        def _find_release(data, version_: str = None):
-            releases = [Release.from_kwargs(**kwargs) for kwargs in data]
+        def _process_data(data):
+            releases_data = data if isinstance(data, list) else [data]
 
-            if version_ is not None:
-                version_ = "v%s" % version_ if not str(version_).startswith("v") else str(version_)
-                releases = [release for release in releases if re.search(version_, release.name, re.I)]
+            releases = [Release.from_kwargs(**kwargs) for kwargs in releases_data]
 
+            if version is not None:
+                version_ = "v%s" % version if not str(version).startswith("v") else str(version)
+                releases = [release for release in releases if re.search(version_, release.name or release.tag_name, re.I)]
+
+            found_urls = False
             for release in releases:
                 for asset in release.assets:
-                    if IS_UBUNTU and PATTERN_UBUNTU_RE.search(asset.browser_download_url):
+                    if IS_UBUNTU and PATTERN_UBUNTU_RE.search(asset.name):
                         ubuntu_urls.append(asset.browser_download_url)
-                    if PATTERN_RE.search(asset.browser_download_url):
+                        found_urls = True
+                    if PATTERN_RE.search(asset.name):
                         asset_urls.append(asset.browser_download_url)
+                        found_urls = True
+            return found_urls
 
         asset_urls, ubuntu_urls = [], []
+        api_data = None
+
         for _ in range(retries):
             try:
-                # Use standard library's urllib to fetch API data
                 with urllib.request.urlopen(GITHUB_API_URL, timeout=10) as response:
                     if response.status == 200:
                         content = response.read().decode("utf-8")
-                        _find_release(json.loads(content))
-                        break
+                        api_data = json.loads(content)
+                        # Save the first element (latest release) to local config
+                        if isinstance(api_data, list) and api_data:
+                            cls.export_config(api_data[0])
+                        elif isinstance(api_data, dict):
+                            cls.export_config(api_data)
+
+                        if _process_data(api_data):
+                            logger.info("Fetched release data from GitHub API.")
+                            break
             except Exception as ex:
-                logger.error("Unable to fetch GitHub API: %s" % ex)
+                logger.debug(f"GitHub API fetch failed (Attempt {_+1}): {ex}")
 
         if not asset_urls and not ubuntu_urls:
-            _find_release([cls._STATIC_API_DATA])
+            local_data = cls.import_config()
+            if local_data:
+                _process_data(local_data)
+                logger.info(f"Loaded release data from local config: {RELEASE_CONFIG_PATH}")
+            else:
+                # Last resort: construct a direct download URL based on naming patterns
+                # This works if API is rate-limited and no local config exists
+                v_tag = version or LATEST_VERSION_TAG_NAME
+                if not v_tag.startswith("v"):
+                    v_tag = f"v{v_tag}"
+                v_num = v_tag.lstrip("v")
+
+                target_platform = "ubuntu" if IS_UBUNTU else PLATFORM
+                target_arch = MACHINE
+                if PLATFORM == "windows":
+                    if MACHINE == "amd64":
+                        target_arch = "64"
+                    elif MACHINE == "386":
+                        target_arch = "32"
+                direct_filename = f"tls-client-{target_platform}-{target_arch}-{v_num}.{FILE_EXT}"
+                direct_url = f"https://github.com/bogdanfinn/tls-client/releases/download/{v_tag}/{direct_filename}"
+                asset_urls.append(direct_url)
+                logger.info(f"Fallback: generated direct download URL: {direct_url}")
 
         for url in ubuntu_urls:
             yield url

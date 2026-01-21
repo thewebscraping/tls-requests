@@ -26,14 +26,22 @@ class Request:
         cookies: CookieTypes = None,
         proxy: ProxyTypes = None,
         timeout: TimeoutTypes = None,
+        protocol_racing: bool = None,
+        allow_http: bool = None,
+        stream_id: int = None,
+        **kwargs,
     ) -> None:
         self._content = None
         self._session_id = None
+        self._extra_config = kwargs
         self.url = URL(url, params=params)
         self.method = method.upper()
         self.cookies = Cookies(cookies)
         self.proxy = Proxy(proxy) if proxy else None
         self.timeout = timeout if isinstance(timeout, (float, int)) else DEFAULT_TIMEOUT
+        self.protocol_racing = protocol_racing
+        self.allow_http = allow_http
+        self.stream_id = stream_id
         self.stream = StreamEncoder(data, files, json)
         self.headers = self._prepare_headers(headers)
 
