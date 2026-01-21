@@ -10,12 +10,12 @@ from urllib.parse import urlencode
 from ..types import BufferTypes, ByteOrStr, RequestData, RequestFiles, RequestFileValue, RequestJson
 from ..utils import to_bytes, to_str
 
-__all__ = [
+__all__ = (
     "JsonEncoder",
     "UrlencodedEncoder",
     "MultipartEncoder",
     "StreamEncoder",
-]
+)
 
 T = TypeVar("T", bound="BaseEncoder")
 

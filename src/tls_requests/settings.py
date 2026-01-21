@@ -6,12 +6,12 @@ CHUNK_SIZE: int = 65_536
 DEFAULT_TIMEOUT: float = 30.0
 DEFAULT_MAX_REDIRECTS: int = 9
 DEFAULT_FOLLOW_REDIRECTS: bool = True
-DEFAULT_TLS_DEBUG: bool = False
-DEFAULT_TLS_PROTOCOL_RACING: bool = True
-DEFAULT_TLS_ALLOW_HTTP: bool = False
-DEFAULT_TLS_INSECURE_SKIP_VERIFY: bool = False
-DEFAULT_TLS_HTTP2: Literal["auto", "http1", "http2"] = "auto"
-DEFAULT_TLS_IDENTIFIER: str = "chrome_133"
+DEFAULT_DEBUG: bool = False
+DEFAULT_PROTOCOL_RACING: bool = True
+DEFAULT_ALLOW_HTTP: bool = False
+DEFAULT_INSECURE_SKIP_VERIFY: bool = False
+DEFAULT_HTTP2: Literal["auto", "http1", "http2"] = "auto"
+DEFAULT_CLIENT_IDENTIFIER: str = "chrome_133"
 
 BROWSER_HEADERS: Dict[str, Dict[str, str]] = {
     "chrome": {

@@ -18,7 +18,7 @@ from tls_requests.utils import get_logger
 
 logger = get_logger("TLSLibrary")
 
-__all__ = ["TLSLibrary"]
+__all__ = ("TLSLibrary",)
 
 LATEST_VERSION_TAG_NAME = "v1.13.1"
 BIN_DIR = os.path.join(Path(__file__).resolve(strict=True).parent.parent / "bin")

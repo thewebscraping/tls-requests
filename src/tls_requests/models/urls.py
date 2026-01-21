@@ -12,7 +12,11 @@ from ..exceptions import ProxyError, URLError, URLParamsError
 from ..types import URL_ALLOWED_PARAMS, URLParamTypes, URLTypes
 from ..utils import to_str
 
-__all__ = ["URL", "URLParams", "Proxy"]
+__all__ = (
+    "URL",
+    "URLParams",
+    "Proxy",
+)
 
 
 class URLParams(MutableMapping):

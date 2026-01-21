@@ -20,7 +20,7 @@ if TYPE_CHECKING:
     from .response import Response
 
 
-__all__ = ["Cookies"]
+__all__ = ("Cookies",)
 
 
 class MockResponse:

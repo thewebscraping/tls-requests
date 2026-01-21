@@ -18,7 +18,11 @@ To install the library, you can choose between two methods:
 #### **1\. Install via PyPI:**
 
 ```shell
+# Using pip
 pip install wrapper-tls-requests
+
+# Using uv
+uv add wrapper-tls-requests
 ```
 
 #### **2\. Install via GitHub Repository:**

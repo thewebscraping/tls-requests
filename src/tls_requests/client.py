@@ -25,31 +25,36 @@ from .models import (
     URLParams,
 )
 from .settings import (
+    DEFAULT_ALLOW_HTTP,
+    DEFAULT_CLIENT_IDENTIFIER,
+    DEFAULT_DEBUG,
     DEFAULT_FOLLOW_REDIRECTS,
+    DEFAULT_HTTP2,
     DEFAULT_MAX_REDIRECTS,
+    DEFAULT_PROTOCOL_RACING,
     DEFAULT_TIMEOUT,
-    DEFAULT_TLS_ALLOW_HTTP,
-    DEFAULT_TLS_HTTP2,
-    DEFAULT_TLS_IDENTIFIER,
-    DEFAULT_TLS_PROTOCOL_RACING,
 )
 from .types import (
     AuthTypes,
     CookieTypes,
     HeaderTypes,
     HookTypes,
+    IdentifierArgTypes,
     ProtocolTypes,
     ProxyTypes,
     RequestData,
     RequestFiles,
     TimeoutTypes,
-    TLSIdentifierArgTypes,
     URLParamTypes,
     URLTypes,
 )
 from .utils import get_logger
 
-__all__ = ["AsyncClient", "Client"]
+__all__ = (
+    "BaseClient",
+    "AsyncClient",
+    "Client",
+)
 
 T = TypeVar("T", bound="Client")
 A = TypeVar("A", bound="AsyncClient")
@@ -123,21 +128,39 @@ class BaseClient:
         timeout: TimeoutTypes = DEFAULT_TIMEOUT,
         follow_redirects: bool = DEFAULT_FOLLOW_REDIRECTS,
         max_redirects: int = DEFAULT_MAX_REDIRECTS,
-        http2: ProtocolTypes = DEFAULT_TLS_HTTP2,
+        http2: ProtocolTypes = DEFAULT_HTTP2,
         verify: bool = True,
-        client_identifier: Optional[TLSIdentifierArgTypes] = DEFAULT_TLS_IDENTIFIER,
-        protocol_racing: bool = DEFAULT_TLS_PROTOCOL_RACING,
-        allow_http: bool = DEFAULT_TLS_ALLOW_HTTP,
+        client_identifier: Optional[IdentifierArgTypes] = DEFAULT_CLIENT_IDENTIFIER,
+        debug: bool = DEFAULT_DEBUG,
+        protocol_racing: bool = DEFAULT_PROTOCOL_RACING,
+        allow_http: bool = DEFAULT_ALLOW_HTTP,
         stream_id: Optional[int] = None,
         hooks: Optional[HookTypes] = None,
         encoding: str = "utf-8",
         **config,
     ) -> None:
+        if "tls_identifier" in config:
+            logger.warning(
+                "The 'tls_identifier' parameter is deprecated and will be removed in version 1.3.0. "
+                "Please use 'client_identifier' instead."
+            )
+            if client_identifier == DEFAULT_CLIENT_IDENTIFIER:
+                client_identifier = config.pop("tls_identifier")
+
+        if "tls_debug" in config:
+            logger.warning(
+                "The 'tls_debug' parameter is deprecated and will be removed in version 1.3.0. "
+                "Please use 'debug' instead."
+            )
+            if debug == DEFAULT_DEBUG:
+                debug = config.pop("tls_debug")
+
         self._session = TLSClient.initialize()
         self._config = TLSConfig.from_kwargs(
             http2=http2,
             verify=verify,
             tls_identifier=self.prepare_tls_identifier(client_identifier),
+            debug=debug,
             protocol_racing=protocol_racing,
             allow_http=allow_http,
             stream_id=stream_id,
@@ -165,7 +188,7 @@ class BaseClient:
         self.protocol_racing = protocol_racing
         self.allow_http = allow_http
         self.stream_id = stream_id
-        self.client_identifier: Optional[TLSIdentifierArgTypes] = (
+        self.client_identifier: Optional[IdentifierArgTypes] = (
             TLSIdentifierRotator.from_file(client_identifier)  # type: ignore
             if isinstance(client_identifier, list)
             else client_identifier
@@ -274,14 +297,14 @@ class BaseClient:
             return Proxy(str(proxy))
         raise ProxyError(f"Unsupported proxy type: {type(proxy)}")
 
-    def prepare_tls_identifier(self, identifier: Optional[TLSIdentifierArgTypes]) -> str:
+    def prepare_tls_identifier(self, identifier: Optional[IdentifierArgTypes]) -> str:
         if isinstance(identifier, str):
             return identifier
         if isinstance(identifier, TLSIdentifierRotator):
             return str(identifier.next())
-        return str(DEFAULT_TLS_IDENTIFIER)
+        return str(DEFAULT_CLIENT_IDENTIFIER)
 
-    def prepare_config(self, request: Request, tls_identifier: str = DEFAULT_TLS_IDENTIFIER):
+    def prepare_config(self, request: Request, tls_identifier: str = DEFAULT_CLIENT_IDENTIFIER):
         """Prepare TLS Config"""
 
         config = self.config.copy_with(
@@ -876,7 +899,7 @@ class AsyncClient(BaseClient):
             return identifier
         if isinstance(identifier, TLSIdentifierRotator):
             return await identifier.anext()
-        return DEFAULT_TLS_IDENTIFIER
+        return DEFAULT_CLIENT_IDENTIFIER
 
     async def abuild_request(
         self,

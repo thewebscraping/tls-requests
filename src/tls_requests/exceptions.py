@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     pass
 
-__all__ = [
+__all__ = (
     "AuthenticationError",
     "CookieConflictError",
     "HTTPError",
@@ -18,7 +18,7 @@ __all__ = [
     "RotatorError",
     "TooManyRedirects",
     "URLError",
-]
+)
 
 
 class HTTPError(Exception):

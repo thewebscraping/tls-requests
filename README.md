@@ -3,6 +3,7 @@
 [![GitHub License](https://img.shields.io/github/license/thewebscraping/tls-requests)](https://github.com/thewebscraping/tls-requests/blob/main/LICENSE)
 [![CI](https://github.com/thewebscraping/tls-requests/actions/workflows/ci.yml/badge.svg)](https://github.com/thewebscraping/tls-requests/actions/workflows/ci.yml)
 [![PyPI - Version](https://img.shields.io/pypi/v/wrapper-tls-requests)](https://pypi.org/project/wrapper-tls-requests/)
+[![Sponsor](https://img.shields.io/badge/Sponsor-thewebscraping-pink?logo=github-sponsors&logoColor=white)](https://github.com/sponsors/thewebscraping)
 ![Python Version](https://img.shields.io/badge/Python-3.9%20%7C%203.10%20%7C%203.11%20%7C%203.12-blue?style=flat)
 ![Pre-commit](https://img.shields.io/badge/pre--commit-enabled-brightgreen?logo=pre-commit&logoColor=white)
 
@@ -38,7 +39,7 @@ Start using TLS Requests with just a few lines of code. It automatically synchro
 ```pycon
 >>> import tls_requests
 >>> # The library automatically injects matching User-Agent and Sec-CH-UA headers
->>> r = tls_requests.get("https://httpbin.org/headers", tls_identifier="chrome_133")
+>>> r = tls_requests.get("https://httpbin.org/headers", client_identifier="chrome_133")
 >>> r.json()["headers"]["User-Agent"]
 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/133.0.0.0 Safari/537.36'
 ```
@@ -57,7 +58,7 @@ Basic automatically rotates for proxies and TLS identifiers:
 >>> r = tls_requests.get(
     "https://httpbin.org/get",
     proxy=proxy_rotator,
-    tls_identifier=tls_requests.TLSIdentifierRotator()
+    client_identifier=tls_requests.TLSIdentifierRotator()
 )
 >>> r
 <Response [200 OK]>
@@ -123,7 +124,7 @@ making it easy to scrape data or interact with websites that use sophisticated a
 *   **Content Decoding**: Automatic handling of gzip and brotli-encoded responses.
 *   **Hooks**: Perfect for logging, monitoring, tracing, or pre/post-processing requests and responses.
 *   **Unicode Support**: Effortlessly process Unicode response bodies.
-*   **Advanced TLS Options**: Support for `protocol_racing`, `allow_http`, `stream_id`, and `local_address`.
+*   **Advanced TLS Options**: Support for `protocol_racing`, `allow_http` and `stream_id`.
 *   **File Uploads**: Simplified multipart file upload support.
 *   **Proxy Configuration**: Supports Socks5, HTTP, and HTTPS proxies for enhanced privacy.
 

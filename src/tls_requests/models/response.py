@@ -18,7 +18,7 @@ from .request import Request
 from .status_codes import StatusCodes
 from .tls import TLSResponse
 
-__all__ = ["Response"]
+__all__ = ("Response",)
 
 T = TypeVar("T", bound="Response")
 

@@ -1,104 +1,92 @@
-Client Usage
-================================
+# Client Usage
 
-This guide details how to utilize the `tls_requests.Client` for efficient and advanced HTTP networking.
-If you're transitioning from the popular `requests` library, the `Client` in `tls_requests` provides a powerful alternative with enhanced capabilities.
+The `Client` class is the primary interface for making synchronous HTTP requests with `tls_requests`. It manages persistent sessions, handles cookie storage, and allows for shared configuration across multiple requests.
 
-* * *
-
-Why Use a Client?
------------------
-
-!!! hint
-    If you’re familiar with `requests`, think of `tls_requests.Client()` as the equivalent of `requests.Session()`.
-
-### TL;DR
-
-Use a `Client` instance if you're doing more than one-off scripts or prototypes. It optimizes network resource usage by reusing connections, which is critical for performance when making multiple requests.
-
-**Advantages:**
-
-*   Efficient connection reuse.
-*   Simplified configuration sharing across requests.
-*   Advanced control over request behavior and customization.
+If you are familiar with the `requests` library, `tls_requests.Client` is equivalent to `requests.Session`.
 
 * * *
 
-Recommended Usage
------------------
+## Why Use the Client?
 
-### Using a Context Manager
+While you can use top-level functions like `tls_requests.get()`, using a `Client` is recommended for most applications because:
 
-The best practice is to use a `Client` as a context manager. This ensures connections are properly cleaned up:
+*   **Performance**: Reuses underlying TLS sessions and network connections.
+*   **State Management**: Automatically manages cookies and authentication across multiple requests.
+*   **Consistency**: Shared headers, proxies, and timeouts are applied to every request made with the client.
+
+* * *
+
+## Usage Patterns
+
+### Recommended: Context Manager
+
+Using the `with` statement ensures that the client is automatically closed and its native resources are freed once you are finished.
 
 ```python
+import tls_requests
+
 with tls_requests.Client() as client:
     response = client.get("https://httpbin.org/get")
-    print(response)  # <Response [200 OK]>
+    print(response.status_code)
 ```
 
-### Explicit Cleanup
+### Manual Management
 
-If not using a context manager, ensure to close the client explicitly:
+If you cannot use a context manager, ensure you call `.close()` manually.
 
 ```python
+import tls_requests
+
 client = tls_requests.Client()
-try:
-    response = client.get("https://httpbin.org/get")
-    print(response)  # <Response [200 OK]>
-finally:
-    client.close()
+response = client.get("https://httpbin.org/get")
+# ... do more work ...
+client.close()
 ```
 
 * * *
 
-Making Requests
----------------
+## Persistent Configuration
 
-A `Client` can send requests using methods like `.get()`, `.post()`, etc.:
+You can set default values during client initialization that will apply to every subsequent request.
 
 ```python
-with tls_requests.Client() as client:
-    response = client.get("https://httpbin.org/get")
-    print(response)  # <Response [200 OK]>
+import tls_requests
+
+# Set global headers and a proxy
+client = tls_requests.Client(
+    headers={"User-Agent": "MyCustomBrowser/1.0"},
+    proxy="http://127.0.0.1:8080"
+)
+
+# This request will use the custom User-Agent and Proxy
+response = client.get("https://httpbin.org/headers")
 ```
 
-### Custom Headers
+### Merging Headers and Cookies
 
-To include custom headers in a request:
-
-```python
-headers = {'X-Custom': 'value'}
-with tls_requests.Client() as client:
-    response = client.get("https://httpbin.org/get", headers=headers)
-    print(response.request.headers['X-Custom'])  # 'value'
-```
-
-* * *
-
-Sharing Configuration Across Requests
--------------------------------------
-
-You can apply default configurations, such as headers, for all requests made with the `Client`:
+If you provide headers or cookies both at the client level and in an individual request, they are merged. Request-level values will override client-level values if there is a conflict.
 
 ```python
-headers = {'user-agent': 'my-app/1.0'}
-with tls_requests.Client(headers=headers) as client:
-    response = client.get("https://httpbin.org/headers")
-    print(response.json()['headers']['User-Agent'])  # 'my-app/1.0'
+with tls_requests.Client(headers={"X-Client": "A"}) as client:
+    # This request has both 'X-Client: A' and 'X-Request: B'
+    resp = client.get("https://httpbin.org/headers", headers={"X-Request": "B"})
 ```
 
 * * *
 
-Merging Configurations
-----------------------
+## Request Methods
 
-When client-level and request-level options overlap:
+The client supports all standard HTTP methods:
 
-*   **Headers, query parameters, cookies:** Combined. Example:
+- `client.get(url, **kwargs)`
+- `client.post(url, data=..., json=..., **kwargs)`
+- `client.put(url, **kwargs)`
+- `client.patch(url, **kwargs)`
+- `client.delete(url, **kwargs)`
+- `client.head(url, **kwargs)`
+- `client.options(url, **kwargs)`
 
-```python
-client_headers = {'X-Auth': 'client'}
+For more advanced scenarios like custom authentication or request hooks, refer to the dedicated guides in the [Advanced](../advanced/authentication.md) section.
 request_headers = {'X-Custom': 'request'}
 with tls_requests.Client(headers=client_headers) as client:
     response = client.get("https://httpbin.org/get", headers=request_headers)

@@ -58,13 +58,13 @@ Use the same syntax for PUT, DELETE, HEAD, and OPTIONS:
 
 * * *
 
-Using TLS Client Identifiers
-----------------------------
+Using Client Identifiers
+-----------------------
 
-Specify a TLS client profile using the [`tls_identifier`](tls/profiles#internal-profiles) parameter:
+Specify a TLS client profile using the [`client_identifier`](tls/profiles#internal-profiles) parameter:
 
 ```pycon
->>> r = tls_requests.get('https://httpbin.org/get', tls_identifier="chrome_120")
+>>> r = tls_requests.get('https://httpbin.org/get', client_identifier="chrome_120")
 ```
 
 * * *
@@ -75,7 +75,7 @@ HTTP/2 Support
 Enable HTTP/2 with the `http2` parameter:
 
 ```pycon
->>> r = tls_requests.get('https://httpbin.org/get', http2=True, tls_identifier="chrome_120")  # firefox_120
+>>> r = tls_requests.get('https://httpbin.org/get', http2=True, client_identifier="chrome_120")
 ```
 
 !!! tip
@@ -228,8 +228,8 @@ Form encoded data can also include multiple values from a given key.
 Upload files using `files`:
 
 ```pycon
->>> files = {'image': open('docs.sh/static/load_library.png', 'rb')}
->>> r = tls_requests.post("https://httpbin.org/post", files=files)
+>>> files = {'image': open('static/coingecko.png', 'rb')}
+>>> r = tls_requests.post("https://httpbin.org/get", files=files)
 >>> print(r.text)
 {
   "args": {},
@@ -244,8 +244,8 @@ Upload files using `files`:
 Add custom filenames or MIME types:
 
 ```pycon
->>> files = {'image': ('image.png', open('docs.sh/static/load_library.png', 'rb'), 'image/*')}
->>> r = tls_requests.post("https://httpbin.org/post", files=files)
+>>> files = {'image': ('image.png', open('static/coingecko.png', 'rb'), 'image/*')}
+>>> r = tls_requests.post("https://httpbin.org/get", files=files)
 >>> print(r.text)
 {
   "args": {},
@@ -261,8 +261,8 @@ If you need to include non-file data fields in the multipart form, use the `data
 
 ```pycon
 >>> data = {'key1': ['value1', 'value2']}
->>> files = {'image': open('docs.sh/static/load_library.png', 'rb')}
->>> r = tls_requests.post("https://httpbin.org/post", data=data, files=files)
+>>> files = {'image': open('static/coingecko.png', 'rb')}
+>>> r = tls_requests.post("https://httpbin.org/get", data=data, files=files)
 >>> print(r.text)
 {
   "args": {},
@@ -273,7 +273,7 @@ If you need to include non-file data fields in the multipart form, use the `data
   "form": {
     "key1": [
       "value1",
-      "value2"
+      "value1"
     ]
   },
   ...

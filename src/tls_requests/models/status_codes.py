@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from enum import Enum
 
-__all__ = ["StatusCodes"]
+__all__ = ("StatusCodes",)
 
 
 class StatusCodes(int, Enum):

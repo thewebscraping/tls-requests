@@ -39,6 +39,7 @@ dependencies = [
 ]
 
 [project.urls]
+Sponsor = "https://github.com/sponsors/thewebscraping"
 Changelog = "https://github.com/thewebscraping/tls-requests/blob/main/CHANGELOG.md"
 Documentation = "https://thewebscraping.github.io/tls-requests/"
 Source = "https://github.com/thewebscraping/tls-requests"

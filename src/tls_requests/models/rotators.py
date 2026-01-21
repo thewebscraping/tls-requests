@@ -10,9 +10,16 @@ from pathlib import Path
 from typing import Any, Generic, Iterable, Iterator, List, Literal, Optional, TypeVar, Union
 
 from ..exceptions import RotatorError
-from ..types import HeaderTypes, TLSIdentifierTypes
+from ..types import HeaderTypes, IdentifierTypes
 from .headers import Headers
 from .urls import Proxy
+
+__all__ = [
+    "BaseRotator",
+    "ProxyRotator",
+    "TLSIdentifierRotator",
+    "HeaderRotator",
+]
 
 T = TypeVar("T")
 R = TypeVar("R", bound="BaseRotator")
@@ -425,20 +432,20 @@ class ProxyRotator(BaseRotator[Proxy]):
             self._rebuild_iterator()
 
 
-class TLSIdentifierRotator(BaseRotator[TLSIdentifierTypes]):
+class TLSIdentifierRotator(BaseRotator[IdentifierTypes]):
     """
     A unified rotator for TLS Identifiers, supporting both sync and async operations.
     """
 
     def __init__(
         self,
-        items: Optional[Iterable[TLSIdentifierTypes]] = None,
+        items: Optional[Iterable[IdentifierTypes]] = None,
         strategy: Literal["round_robin", "random", "weighted"] = "round_robin",
     ) -> None:
         super().__init__(items or TLS_IDENTIFIER_TEMPLATES, strategy)  # type: ignore[arg-type]
 
     @classmethod
-    def rebuild_item(cls, item: Any) -> Optional[TLSIdentifierTypes]:
+    def rebuild_item(cls, item: Any) -> Optional[IdentifierTypes]:
         """Processes a raw item to be used as a TLS identifier."""
         if isinstance(item, str):
             return item

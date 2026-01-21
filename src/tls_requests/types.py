@@ -67,11 +67,11 @@ URLParamTypes = Optional[
 MethodTypes = Union[str, Literal["GET", "OPTIONS", "HEAD", "POST", "PUT", "PATCH", "DELETE"]]
 ProtocolTypes = Optional[Union[Literal["auto", "http1", "http2"], bool]]
 HookTypes = Optional[Mapping[Literal["request", "response"], Sequence[Callable]]]
-TLSSession = Optional[Any]
-TLSSessionId = Union[str, UUID]
-TLSPayload = Union[dict, str, bytes, bytearray]
-TLSCookiesTypes = Optional[List[Dict[str, str]]]
-TLSIdentifierLiterals = Literal[
+Session = Optional[Any]
+SessionId = Union[str, UUID]
+Payload = Union[dict, str, bytes, bytearray]
+CookiesTypes = Optional[List[Dict[str, str]]]
+IdentifierLiterals = Literal[
     "chrome_103",
     "chrome_104",
     "chrome_105",
@@ -140,8 +140,8 @@ TLSIdentifierLiterals = Literal[
     "zalando_android_mobile",
     "zalando_ios_mobile",
 ]
-TLSIdentifierTypes = Union[TLSIdentifierLiterals, str]
-TLSIdentifierArgTypes = Optional[Union[TLSIdentifierTypes, "TLSIdentifierRotator"]]
+IdentifierTypes = Union[IdentifierLiterals, str]
+IdentifierArgTypes = Optional[Union[IdentifierTypes, "TLSIdentifierRotator"]]
 
 AnyList = List[
     Union[

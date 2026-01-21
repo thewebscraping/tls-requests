@@ -18,7 +18,7 @@ from .encoders import StreamEncoder
 from .headers import Headers
 from .urls import URL, Proxy
 
-__all__ = ["Request"]
+__all__ = ("Request",)
 
 
 class Request:

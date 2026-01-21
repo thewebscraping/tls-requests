@@ -9,25 +9,27 @@ from typing import Any, Callable, Dict, List, Mapping, Optional, Set, TypeVar, U
 
 from ..settings import (
     BROWSER_HEADERS,
+    DEFAULT_ALLOW_HTTP,
+    DEFAULT_CLIENT_IDENTIFIER,
+    DEFAULT_DEBUG,
+    DEFAULT_HTTP2,
+    DEFAULT_PROTOCOL_RACING,
     DEFAULT_TIMEOUT,
-    DEFAULT_TLS_ALLOW_HTTP,
-    DEFAULT_TLS_DEBUG,
-    DEFAULT_TLS_HTTP2,
-    DEFAULT_TLS_IDENTIFIER,
-    DEFAULT_TLS_PROTOCOL_RACING,
 )
-from ..types import MethodTypes, TLSCookiesTypes, TLSIdentifierTypes, TLSSessionId, URLTypes
+from ..types import CookiesTypes, IdentifierTypes, MethodTypes, SessionId, URLTypes
 from ..utils import to_base64, to_bytes, to_json
 from .encoders import StreamEncoder
 from .libraries import TLSLibrary
 from .status_codes import StatusCodes
 
-__all__ = [
+__all__ = (
     "TLSClient",
     "TLSResponse",
     "TLSConfig",
     "CustomTLSClientConfig",
-]
+    "TLSRequestCookiesConfig",
+)
+
 
 T = TypeVar("T", bound="_BaseConfig")
 
@@ -122,14 +124,14 @@ class TLSClient:
         return cls()
 
     @classmethod
-    def get_cookies(cls, session_id: TLSSessionId, url: str) -> "TLSResponse":
+    def get_cookies(cls, session_id: SessionId, url: str) -> "TLSResponse":
         if cls._getCookiesFromSession is None:
             cls.initialize()
         response = cls._send(cls._getCookiesFromSession, {"sessionId": session_id, "url": url})  # type: ignore[arg-type]
         return response
 
     @classmethod
-    def add_cookies(cls, session_id: TLSSessionId, payload: dict):
+    def add_cookies(cls, session_id: SessionId, payload: dict):
         if cls._addCookiesToSession is None:
             cls.initialize()
         payload["sessionId"] = session_id
@@ -148,7 +150,7 @@ class TLSClient:
         return False
 
     @classmethod
-    def destroy_session(cls, session_id: TLSSessionId) -> bool:
+    def destroy_session(cls, session_id: SessionId) -> bool:
         if cls._destroySession is None:
             cls.initialize()
         response = cls._send(cls._destroySession, {"sessionId": session_id})  # type: ignore[arg-type]
@@ -474,11 +476,11 @@ class TLSConfig(_BaseConfig):
     sessionId: str = field(default_factory=lambda: str(uuid.uuid4()))
     streamID: Optional[int] = None
     timeoutSeconds: int = 30
-    tlsClientIdentifier: Optional[TLSIdentifierTypes] = DEFAULT_TLS_IDENTIFIER
-    withAllowHTTP: bool = DEFAULT_TLS_ALLOW_HTTP
-    withDebug: bool = DEFAULT_TLS_DEBUG
+    tlsClientIdentifier: Optional[IdentifierTypes] = DEFAULT_CLIENT_IDENTIFIER
+    withAllowHTTP: bool = DEFAULT_ALLOW_HTTP
+    withDebug: bool = DEFAULT_DEBUG
     withDefaultCookieJar: bool = False
-    withProtocolRacing: bool = DEFAULT_TLS_PROTOCOL_RACING
+    withProtocolRacing: bool = DEFAULT_PROTOCOL_RACING
     withRandomTLSExtensionOrder: bool = True
     withoutCookieJar: bool = False
 
@@ -507,7 +509,7 @@ class TLSConfig(_BaseConfig):
         self,
         session_id: Optional[str] = None,
         headers: Optional[Mapping[str, str]] = None,
-        cookies: Optional[TLSCookiesTypes] = None,
+        cookies: Optional[CookiesTypes] = None,
         method: Optional[MethodTypes] = None,
         url: Optional[URLTypes] = None,
         body: Optional[Union[str, bytes, bytearray]] = None,
@@ -516,8 +518,8 @@ class TLSConfig(_BaseConfig):
         http2: Optional[bool] = None,
         timeout: Optional[Union[float, int]] = None,
         verify: Optional[bool] = None,
-        tls_identifier: Optional[TLSIdentifierTypes] = None,
-        tls_debug: Optional[bool] = None,
+        client_identifier: Optional[IdentifierTypes] = None,
+        debug: Optional[bool] = None,
         protocol_racing: Optional[bool] = None,
         allow_http: Optional[bool] = None,
         stream_id: Optional[int] = None,
@@ -536,8 +538,8 @@ class TLSConfig(_BaseConfig):
             "proxyUrl": proxy,
             "timeoutSeconds": timeout,
             "insecureSkipVerify": None if verify is None else not verify,
-            "tlsClientIdentifier": tls_identifier,
-            "withDebug": tls_debug,
+            "tlsClientIdentifier": client_identifier,
+            "withDebug": debug,
             "withProtocolRacing": protocol_racing,
             "withAllowHTTP": allow_http,
             "streamID": stream_id,
@@ -563,27 +565,29 @@ class TLSConfig(_BaseConfig):
         cls,
         session_id: Optional[str] = None,
         headers: Optional[Mapping[str, str]] = None,
-        cookies: Optional[TLSCookiesTypes] = None,
+        cookies: Optional[CookiesTypes] = None,
         method: Optional[MethodTypes] = None,
         url: Optional[URLTypes] = None,
         body: Optional[Union[str, bytes, bytearray]] = None,
         is_byte_request: bool = False,
         proxy: Optional[str] = None,
-        http2: Optional[Union[bool, str]] = DEFAULT_TLS_HTTP2,
+        http2: Optional[Union[bool, str]] = DEFAULT_HTTP2,
         timeout: Union[float, int] = DEFAULT_TIMEOUT,
         verify: bool = True,
-        tls_identifier: Optional[TLSIdentifierTypes] = None,
-        tls_debug: bool = DEFAULT_TLS_DEBUG,
-        protocol_racing: bool = DEFAULT_TLS_PROTOCOL_RACING,
-        allow_http: bool = DEFAULT_TLS_ALLOW_HTTP,
+        client_identifier: Optional[IdentifierTypes] = None,
+        debug: bool = DEFAULT_DEBUG,
+        protocol_racing: bool = DEFAULT_PROTOCOL_RACING,
+        allow_http: bool = DEFAULT_ALLOW_HTTP,
         stream_id: Optional[int] = None,
         **kwargs: Any,
     ) -> "TLSConfig":
         """Creates a `TLSConfig` instance from keyword arguments."""
 
         # 1. Handle Snake Case Aliases
-        if tls_identifier is not None:
-            kwargs.setdefault("tlsClientIdentifier", tls_identifier)
+        if client_identifier is not None:
+            kwargs.setdefault("tlsClientIdentifier", client_identifier)
+        if debug is not None:
+            kwargs.setdefault("withDebug", debug)
         if protocol_racing is not None:
             kwargs.setdefault("withProtocolRacing", protocol_racing)
         if allow_http is not None:
@@ -592,7 +596,7 @@ class TLSConfig(_BaseConfig):
             kwargs.setdefault("streamID", stream_id)
 
         # 2. Resolve Identifier (Prioritize explicit arg, then kwargs, then default)
-        identifier = tls_identifier or kwargs.get("tlsClientIdentifier") or DEFAULT_TLS_IDENTIFIER
+        identifier = client_identifier or kwargs.get("tlsClientIdentifier") or DEFAULT_CLIENT_IDENTIFIER
         identifier_str = str(identifier).lower()
 
         # 3. Dynamic Header Mapping based on identifier
@@ -646,7 +650,7 @@ class TLSConfig(_BaseConfig):
             "timeoutSeconds": (int(timeout) if isinstance(timeout, (float, int)) else DEFAULT_TIMEOUT),
             "insecureSkipVerify": not verify,
             "tlsClientIdentifier": identifier,
-            "withDebug": tls_debug,
+            "withDebug": debug,
             "withProtocolRacing": protocol_racing,
             "withAllowHTTP": allow_http,
             "streamID": stream_id,

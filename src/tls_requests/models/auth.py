@@ -6,6 +6,11 @@ from typing import Any, Union
 from ..exceptions import AuthenticationError
 from .request import Request
 
+__all__ = (
+    "Auth",
+    "BasicAuth",
+)
+
 
 class Auth:
     """Base Auth"""

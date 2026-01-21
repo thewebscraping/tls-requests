@@ -8,7 +8,10 @@ from ..exceptions import HeaderError
 from ..types import ByteOrStr, HeaderTypes
 from ..utils import to_str
 
-__all__ = ["Headers"]
+__all__ = (
+    "Headers",
+    "HeaderAlias",
+)
 
 HeaderAliasTypes = Literal["*", "lower", "capitalize"]
 

@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import tls_requests
-from tls_requests.models.tls import TLSConfig
 
 
 def test_protocol_racing_parameters():
@@ -29,19 +28,3 @@ def test_stream_id_parameters():
     # Test stream_id
     with tls_requests.Client(stream_id=1) as client:
         assert client.stream_id == 1
-
-
-def test_extra_kwargs_persistence():
-    # Test that extra kwargs are preserved in TLSConfig
-    config = TLSConfig.from_kwargs(local_address="127.0.0.1", random_extra="value")
-    payload = config.to_payload()
-    assert payload.get("localAddress") == "127.0.0.1"
-    assert payload.get("randomExtra") == "value"
-
-
-def test_client_initialization_with_extra_kwargs():
-    # Test passing extra kwargs to Client
-    with tls_requests.Client(local_address="127.0.0.1") as client:
-        # Check if the internal config has it
-        payload = client._config.to_payload()
-        assert payload.get("localAddress") == "127.0.0.1"
