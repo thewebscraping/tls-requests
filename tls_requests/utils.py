@@ -9,18 +9,19 @@ FORMAT = "[%(asctime)s] %(levelname)-8s %(name)s:%(funcName)s:%(lineno)d - %(mes
 DATE_FORMAT = "%Y-%m-%d %H:%M:%S"
 
 
-def import_module(name: Union[str, list[str]]):
+def import_module(name: Union[str, list[str]]) -> Any:
     modules = name if isinstance(name, list) else [name]
-    for module in modules:
-        if isinstance(module, str):
+    for module_name in modules:
+        if isinstance(module_name, str):
             try:
-                module = importlib.import_module(module)
+                module = importlib.import_module(module_name)
                 return module
             except ImportError:
                 pass
+    return None
 
 
-chardet = import_module(["chardet", "charset_normalizer"])
+chardet = import_module(["charset_normalizer", "chardet"])
 orjson = import_module(["orjson"])
 if orjson:
     jsonlib = orjson
@@ -31,7 +32,7 @@ else:
 
 
 def get_logger(
-    name: str = "TLSRequests", level: int | str = logging.INFO
+    name: str = "TLSRequests", level: Union[int, str] = logging.INFO
 ) -> logging.Logger:
     logger = logging.getLogger(name)
     logger.setLevel(level)
@@ -79,7 +80,7 @@ def to_str(
     return str(value)
 
 
-def to_base64(value: Union[dict, str, bytes], encoding: str = "utf-8") -> AnyStr:
+def to_base64(value: Union[dict, str, bytes], encoding: str = "utf-8") -> str:
     return base64.b64encode(to_bytes(value, encoding)).decode(encoding)
 
 
@@ -87,7 +88,7 @@ def b64decode(value: AnyStr) -> bytes:
     return base64.b64decode(value)
 
 
-def to_json(value: Union[str, bytes], encoding: str = "utf-8", **kwargs) -> dict:
+def to_json(value: Union[str, bytes], **kwargs) -> dict:
     if isinstance(value, dict):
         return value
     try:

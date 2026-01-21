@@ -2,7 +2,8 @@ import binascii
 import os
 from io import BufferedReader, BytesIO, TextIOWrapper
 from mimetypes import guess_type
-from typing import Any, AsyncIterator, Dict, Iterator, Mapping, Tuple, TypeVar
+from typing import (Any, AsyncIterator, Dict, Iterator, List, Mapping,
+                    Optional, Tuple, TypeVar)
 from urllib.parse import urlencode
 
 from ..types import (BufferTypes, ByteOrStr, RequestData, RequestFiles,
@@ -45,7 +46,7 @@ def iter_buffer(buffer: BufferTypes, chunk_size: int = 65_536):
 class BaseField:
     def __init__(self, name: str, value: Any):
         self._name = name
-        self._headers = {}
+        self._headers: Dict[bytes, bytes] = {}
 
     @property
     def headers(self):
@@ -78,7 +79,7 @@ class BaseField:
         content_type = getattr(self, "content_type", None)
         if content_type:
             self._headers[b"Content-Type"] = (
-                self.content_type.encode("ascii") if isinstance(content_type, str) else content_type
+                content_type.encode("ascii") if isinstance(content_type, str) else content_type
             )
         return self._headers
 
@@ -114,10 +115,10 @@ class FileField(BaseField):
 
         if isinstance(buffer, (TextIOWrapper, BufferedReader)):
             if not filename:
-                _, filename = os.path.split(buffer.name)
+                _, filename = os.path.split(str(buffer.name))
 
             if not content_type:
-                content_type = guess_content_type(buffer.name)
+                content_type = guess_content_type(str(buffer.name))
 
             if buffer.mode != "rb":
                 buffer.close()
@@ -128,7 +129,7 @@ class FileField(BaseField):
         else:
             buffer = BytesIO(buffer)
 
-        return filename or "upload", buffer, content_type or "application/octet-stream"
+        return str(filename or "upload"), buffer, str(content_type or "application/octet-stream")
 
     def render_data(self, chunk_size: int = 65_536) -> Iterator[bytes]:
         yield from iter_buffer(self._buffer, chunk_size)
@@ -170,7 +171,7 @@ class BaseEncoder:
         for chunk in self.render():
             yield chunk
 
-    def __enter__(self) -> T:
+    def __enter__(self: T) -> T:
         return self
 
     def __exit__(self, *args, **kwargs):
@@ -180,9 +181,9 @@ class BaseEncoder:
 class MultipartEncoder(BaseEncoder):
     def __init__(
         self,
-        data: RequestData = None,
-        files: RequestFiles = None,
-        boundary: bytes = None,
+        data: Optional[RequestData] = None,
+        files: Optional[RequestFiles] = None,
+        boundary: Optional[bytes] = None,
         *,
         chunk_size: int = 65_536,
         **kwargs,
@@ -210,24 +211,24 @@ class MultipartEncoder(BaseEncoder):
             yield b"--%s--\r\n" % self.boundary
         yield b""
 
-    def _prepare_fields(self, data: RequestData, files: RequestFiles):
-        fields = []
+    def _prepare_fields(self, data: Optional[RequestData], files: Optional[RequestFiles]):
+        fields: List[BaseField] = []
         if isinstance(data, Mapping):
             for name, value in data.items():
                 if isinstance(value, (bytes, str, int, float, bool)):
-                    fields.append(DataField(name=name, value=value))
+                    fields.append(DataField(name=to_str(name), value=value))
                 else:
                     for item in value:
-                        fields.append(DataField(name=name, value=item))
+                        fields.append(DataField(name=to_str(name), value=item))
 
         if isinstance(files, Mapping):
-            for name, value in files.items():
-                fields.append(FileField(name=name, value=value))
+            for file_name, file_value in files.items():
+                fields.append(FileField(name=to_str(file_name), value=file_value))
         return fields
 
 
 class JsonEncoder(BaseEncoder):
-    def __init__(self, data: RequestData, *, chunk_size: int = 65_536, **kwargs):
+    def __init__(self, data: Optional[RequestData], *, chunk_size: int = 65_536, **kwargs):
         self._buffer = self._prepare_fields(data)
         self._chunk_size = chunk_size
         self._is_closed = False
@@ -235,13 +236,14 @@ class JsonEncoder(BaseEncoder):
     def get_headers(self):
         return {b"Content-Type": b"application/json"}
 
-    def _prepare_fields(self, data: RequestData):
-        if isinstance(data, Mapping):
+    def _prepare_fields(self, data: Optional[RequestData]):
+        if data is not None:
             return BytesIO(to_bytes(data))
+        return None
 
 
 class UrlencodedEncoder(BaseEncoder):
-    def __init__(self, data: RequestData, *, chunk_size: int = 65_536, **kwargs):
+    def __init__(self, data: Optional[RequestData], *, chunk_size: int = 65_536, **kwargs):
         self._buffer = self._prepare_fields(data)
         self._chunk_size = chunk_size
         self._is_closed = False
@@ -249,7 +251,7 @@ class UrlencodedEncoder(BaseEncoder):
     def get_headers(self):
         return {b"Content-Type": b"application/x-www-form-urlencoded"}
 
-    def _prepare_fields(self, data: RequestData):
+    def _prepare_fields(self, data: Optional[RequestData]):
         fields = []
         if isinstance(data, Mapping):
             for name, value in data.items():
@@ -260,22 +262,23 @@ class UrlencodedEncoder(BaseEncoder):
                         fields.append((name, to_str(item)))
 
             return BytesIO(urlencode(fields, doseq=True).encode("utf-8"))
+        return None
 
 
 class StreamEncoder(BaseEncoder):
     def __init__(
         self,
-        data: RequestData = None,
-        files: RequestFiles = None,
-        json: RequestJson = None,
+        data: Optional[RequestData] = None,
+        files: Optional[RequestFiles] = None,
+        json: Optional[RequestJson] = None,
         *,
-        chunk_size: int = 65_536,
+        chunk_size: Optional[int] = 65_536,
         **kwargs,
     ):
         self._chunk_size = chunk_size if isinstance(chunk_size, int) else 65_536
         self._is_closed = False
         if files is not None:
-            self._stream = MultipartEncoder(data, files)
+            self._stream: BaseEncoder = MultipartEncoder(data, files)
         elif data is not None:
             self._stream = UrlencodedEncoder(data)
         elif json is not None:
@@ -291,9 +294,9 @@ class StreamEncoder(BaseEncoder):
         return self._stream.get_headers()
 
     @classmethod
-    def from_bytes(cls, raw: bytes, *, chunk_size: int = None) -> "StreamEncoder":
+    def from_bytes(cls, raw: bytes, *, chunk_size: Optional[int] = None) -> "StreamEncoder":
         ret = cls(chunk_size=chunk_size)
-        ret._stream._buffer = BytesIO(raw)
+        setattr(ret._stream, "_buffer", BytesIO(raw))
         return ret
 
     def close(self):

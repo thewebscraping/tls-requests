@@ -4,6 +4,8 @@ __all__ = ["StatusCodes"]
 
 
 class StatusCodes(int, Enum):
+    reason: str
+
     def __new__(cls, value: int, reason: str = ""):
         obj = int.__new__(cls, value)
         obj._value_ = value
@@ -14,9 +16,11 @@ class StatusCodes(int, Enum):
         return str(self.value)
 
     @classmethod
-    def get_reason(cls, value: int):
+    def get_reason(cls, value: int) -> str:
         if value in cls._value2member_map_:
-            return cls._value2member_map_[value].reason
+            member = cls._value2member_map_[value]
+            if isinstance(member, StatusCodes):
+                return member.reason
         return "Unknown Error"
 
     CONTINUE = 100, "Continue"

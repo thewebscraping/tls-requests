@@ -1,6 +1,7 @@
 import binascii
 import codecs
 import datetime
+import typing
 from email.message import Message
 from typing import Any, Callable, Optional, TypeVar, Union
 
@@ -33,20 +34,20 @@ class Response:
         self,
         status_code: int,
         *,
-        headers: HeaderTypes = None,
+        headers: Optional[HeaderTypes] = None,
         cookies: CookieTypes = None,
-        request: Union[Request] = None,
-        history: ResponseHistory = None,
-        body: bytes = None,
-        stream: StreamEncoder = None,
-        default_encoding: Union[str, Callable] = "utf-8",
+        request: Optional[Request] = None,
+        history: Optional[ResponseHistory] = None,
+        body: Optional[bytes] = None,
+        stream: Optional[StreamEncoder] = None,
+        default_encoding: Union[str, Callable[..., Any]] = "utf-8",
     ) -> None:
-        self._content = None
-        self._elapsed = None
-        self._encoding = None
-        self._text = None
-        self._response_id = None
-        self._http_version = None
+        self._content: bytes = b""
+        self._elapsed: Optional[datetime.timedelta] = None
+        self._encoding: Optional[str] = None
+        self._text: Optional[str] = None
+        self._response_id: str = ""
+        self._http_version: str = "HTTP/1.1"
         self._request: Optional[Request] = request
         self._cookies = Cookies(cookies)
         self._is_stream_consumed = False
@@ -56,6 +57,7 @@ class Response:
         self.status_code = status_code
         self.history = history if isinstance(history, list) else []
         self.default_encoding = default_encoding
+        self.stream: Optional[StreamEncoder] = None
         if isinstance(stream, StreamEncoder):
             self.stream = stream
         else:
@@ -67,7 +69,7 @@ class Response:
 
     @property
     def elapsed(self) -> datetime.timedelta:
-        return self._elapsed
+        return self._elapsed or datetime.timedelta(0)
 
     @elapsed.setter
     def elapsed(self, elapsed: datetime.timedelta) -> None:
@@ -148,13 +150,22 @@ class Response:
             try:
                 if encoding:
                     # fix: charset=utf-8,gbk
-                    encoding = encoding.split(",")[0].strip()
-                    codecs.lookup(encoding)
-                    self._encoding = encoding
+                    if callable(encoding):
+                        encoding = typing.cast(str, encoding(self))
+
+                    if isinstance(encoding, str):
+                        encoding = encoding.split(",")[0].strip()
+                        codecs.lookup(encoding)
+                        self._encoding = encoding
                 else:
                     raise LookupError
             except LookupError:
                 self._encoding = "utf-8"  # fallback to utf-8
+
+        # Always ensure self._encoding is not None at this point
+        if self._encoding is None:
+            self._encoding = "utf-8"
+
         return self._encoding
 
     @property
@@ -209,11 +220,15 @@ class Response:
         return f"<Response [{self.status_code}]>"
 
     def read(self) -> bytes:
+        if self.stream is None:
+            return b""
         with self.stream as stream:
             self._content = b"".join(stream.render())
             return self._content
 
     async def aread(self) -> bytes:
+        if self.stream is None:
+            return b""
         with self.stream as stream:
             self._content = b"".join([chunk async for chunk in stream])
             return self._content
@@ -226,7 +241,8 @@ class Response:
         if not self._is_closed:
             self._is_closed = True
             self._is_stream_consumed = True
-            self.stream.close()
+            if self.stream:
+                self.stream.close()
 
         # Fix pickle dump
         # Ref: https://github.com/thewebscraping/tls-requests/issues/35
@@ -241,8 +257,8 @@ class Response:
             if value:
                 if is_byte_response and response.status > 0:
                     try:
-                        value = b64decode(value.split(",")[-1])
-                        return value
+                        content = b64decode(value.split(",")[-1])
+                        return content
                     except (binascii.Error, AssertionError):
                         raise Base64DecodeError("Couldn't decode the base64 string into bytes.")
                 return value.encode("utf-8")
@@ -254,6 +270,6 @@ class Response:
             headers=response.headers,
             cookies=response.cookies,
         )
-        ret._response_id = response.id
-        ret._http_version = response.usedProtocol
+        ret._response_id = response.id or ""
+        ret._http_version = response.usedProtocol or "HTTP/1.1"
         return ret

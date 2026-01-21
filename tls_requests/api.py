@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import typing
+from typing import Optional
 
 from .client import Client
 from .models import Response
@@ -9,7 +10,8 @@ from .settings import (DEFAULT_FOLLOW_REDIRECTS, DEFAULT_TIMEOUT,
                        DEFAULT_TLS_IDENTIFIER, DEFAULT_TLS_PROTOCOL_RACING)
 from .types import (AuthTypes, CookieTypes, HeaderTypes, MethodTypes,
                     ProtocolTypes, ProxyTypes, RequestData, RequestFiles,
-                    TimeoutTypes, TLSIdentifierTypes, URLParamTypes, URLTypes)
+                    TimeoutTypes, TLSIdentifierArgTypes, TLSIdentifierTypes,
+                    URLParamTypes, URLTypes)
 
 __all__ = [
     "delete",
@@ -28,8 +30,8 @@ def request(
     url: URLTypes,
     *,
     params: URLParamTypes = None,
-    data: RequestData = None,
-    files: RequestFiles = None,
+    data: typing.Optional[RequestData] = None,
+    files: typing.Optional[RequestFiles] = None,
     json: typing.Any = None,
     headers: HeaderTypes = None,
     cookies: CookieTypes = None,
@@ -39,7 +41,7 @@ def request(
     timeout: TimeoutTypes = DEFAULT_TIMEOUT,
     follow_redirects: bool = DEFAULT_FOLLOW_REDIRECTS,
     verify: bool = True,
-    tls_identifier: TLSIdentifierTypes = DEFAULT_TLS_IDENTIFIER,
+    tls_identifier: TLSIdentifierArgTypes = DEFAULT_TLS_IDENTIFIER,
     protocol_racing: bool = DEFAULT_TLS_PROTOCOL_RACING,
     allow_http: bool = DEFAULT_TLS_ALLOW_HTTP,
     stream_id: typing.Optional[int] = None,
@@ -248,9 +250,9 @@ def head(
 def post(
     url: URLTypes,
     *,
-    data: RequestData = None,
-    files: RequestFiles = None,
-    json: typing.Any = None,
+    data: Optional[RequestData] = None,
+    files: Optional[RequestFiles] = None,
+    json: Optional[typing.Any] = None,
     params: URLParamTypes = None,
     headers: HeaderTypes = None,
     cookies: CookieTypes = None,
@@ -297,9 +299,9 @@ def post(
 def put(
     url: URLTypes,
     *,
-    data: RequestData = None,
-    files: RequestFiles = None,
-    json: typing.Any = None,
+    data: Optional[RequestData] = None,
+    files: Optional[RequestFiles] = None,
+    json: Optional[typing.Any] = None,
     params: URLParamTypes = None,
     headers: HeaderTypes = None,
     cookies: CookieTypes = None,
@@ -346,9 +348,9 @@ def put(
 def patch(
     url: URLTypes,
     *,
-    data: RequestData = None,
-    files: RequestFiles = None,
-    json: typing.Any = None,
+    data: Optional[RequestData] = None,
+    files: Optional[RequestFiles] = None,
+    json: Optional[typing.Any] = None,
     params: URLParamTypes = None,
     headers: HeaderTypes = None,
     cookies: CookieTypes = None,
@@ -395,10 +397,10 @@ def patch(
 def delete(
     url: URLTypes,
     *,
-    params: URLParamTypes | None = None,
-    headers: HeaderTypes | None = None,
-    cookies: CookieTypes | None = None,
-    auth: AuthTypes | None = None,
+    params: URLParamTypes = None,
+    headers: HeaderTypes = None,
+    cookies: CookieTypes = None,
+    auth: AuthTypes = None,
     proxy: ProxyTypes = None,
     http2: ProtocolTypes = DEFAULT_TLS_HTTP2,
     timeout: TimeoutTypes = DEFAULT_TIMEOUT,

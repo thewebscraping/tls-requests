@@ -2,10 +2,9 @@ from __future__ import annotations
 
 import datetime
 import time
-import typing
 import uuid
 from enum import Enum
-from typing import (Any, Callable, Literal, Mapping, Optional, Sequence,
+from typing import (Any, Callable, List, Literal, Mapping, Optional, Sequence,
                     TypeVar, Union)
 
 from .exceptions import ProxyError, RemoteProtocolError, TooManyRedirects
@@ -18,7 +17,8 @@ from .settings import (DEFAULT_FOLLOW_REDIRECTS, DEFAULT_MAX_REDIRECTS,
                        DEFAULT_TLS_PROTOCOL_RACING)
 from .types import (AuthTypes, CookieTypes, HeaderTypes, HookTypes,
                     ProtocolTypes, ProxyTypes, RequestData, RequestFiles,
-                    TimeoutTypes, TLSIdentifierTypes, URLParamTypes, URLTypes)
+                    TimeoutTypes, TLSIdentifierArgTypes, URLParamTypes,
+                    URLTypes)
 from .utils import get_logger
 
 __all__ = ["AsyncClient", "Client"]
@@ -28,6 +28,9 @@ A = TypeVar("A", bound="AsyncClient")
 
 
 logger = get_logger("TLSRequests")
+
+
+BC = TypeVar("BC", bound="BaseClient")
 
 
 class ProtocolType(str, Enum):
@@ -84,21 +87,21 @@ class BaseClient:
     def __init__(
         self,
         *,
-        auth: AuthTypes = None,
-        params: URLParamTypes = None,
-        headers: HeaderTypes = None,
-        cookies: CookieTypes = None,
-        proxy: ProxyTypes = None,
+        auth: Optional[AuthTypes] = None,
+        params: Optional[URLParamTypes] = None,
+        headers: Optional[HeaderTypes] = None,
+        cookies: Optional[CookieTypes] = None,
+        proxy: Optional[ProxyTypes] = None,
         timeout: TimeoutTypes = DEFAULT_TIMEOUT,
         follow_redirects: bool = DEFAULT_FOLLOW_REDIRECTS,
         max_redirects: int = DEFAULT_MAX_REDIRECTS,
         http2: ProtocolTypes = DEFAULT_TLS_HTTP2,
         verify: bool = True,
-        client_identifier: Optional[TLSIdentifierTypes] = DEFAULT_TLS_IDENTIFIER,
+        client_identifier: Optional[TLSIdentifierArgTypes] = DEFAULT_TLS_IDENTIFIER,
         protocol_racing: bool = DEFAULT_TLS_PROTOCOL_RACING,
         allow_http: bool = DEFAULT_TLS_ALLOW_HTTP,
         stream_id: Optional[int] = None,
-        hooks: HookTypes = None,
+        hooks: Optional[HookTypes] = None,
         encoding: str = "utf-8",
         **config,
     ) -> None:
@@ -106,7 +109,7 @@ class BaseClient:
         self._config = TLSConfig.from_kwargs(
             http2=http2,
             verify=verify,
-            tls_identifier=client_identifier,
+            tls_identifier=self.prepare_tls_identifier(client_identifier),
             protocol_racing=protocol_racing,
             allow_http=allow_http,
             stream_id=stream_id,
@@ -120,12 +123,12 @@ class BaseClient:
         if isinstance(headers, HeaderRotator):
             self._header_rotator = headers
         elif isinstance(headers, list):
-            self._header_rotator = HeaderRotator.from_file(headers)
+            self._header_rotator = HeaderRotator.from_file(headers)  # type: ignore
         elif headers is not None:
             self._headers = Headers(headers)
         self._hooks = hooks if isinstance(hooks, dict) else {}
         self.auth = auth
-        self.proxy = ProxyRotator.from_file(proxy) if isinstance(proxy, list) else proxy
+        self.proxy = ProxyRotator.from_file(proxy) if isinstance(proxy, list) else proxy  # type: ignore
         self.timeout = timeout
         self.follow_redirects = follow_redirects
         self.max_redirects = max_redirects
@@ -134,14 +137,11 @@ class BaseClient:
         self.protocol_racing = protocol_racing
         self.allow_http = allow_http
         self.stream_id = stream_id
-        self.client_identifier = (
-            TLSIdentifierRotator.from_file(client_identifier)
+        self.client_identifier: Optional[TLSIdentifierArgTypes] = (
+            TLSIdentifierRotator.from_file(client_identifier)  # type: ignore
             if isinstance(client_identifier, list)
             else client_identifier
         )
-        self.protocol_racing = protocol_racing
-        self.allow_http = allow_http
-        self.stream_id = stream_id
         self.encoding = encoding
 
     @property
@@ -163,7 +163,7 @@ class BaseClient:
     @headers.setter
     def headers(self, headers: HeaderTypes) -> None:
         if isinstance(headers, HeaderRotator):
-            self._header_rotator = headers
+            self._header_rotator = headers  # type: ignore[assignment]
         elif isinstance(headers, list):
             self._header_rotator = HeaderRotator.from_file(headers)
         elif headers is not None:
@@ -211,6 +211,8 @@ class BaseClient:
     def prepare_headers(self, headers: HeaderTypes = None, user_agent: Optional[str] = None) -> Headers:
         """Prepare Headers. Gets base headers from rotator if available."""
         if headers is None:
+            if self._header_rotator is not None:
+                return self._header_rotator.next(user_agent=user_agent)
             return self.headers.copy()
         if isinstance(headers, HeaderRotator):
             return headers.next(user_agent=user_agent)
@@ -220,19 +222,22 @@ class BaseClient:
         """Prepare Cookies"""
 
         merged_cookies = self.cookies.copy()
-        return merged_cookies.update(cookies)
+        merged_cookies.update(cookies)
+        return merged_cookies
 
     def prepare_params(self, params: URLParamTypes = None) -> URLParams:
         """Prepare URL Params"""
 
         merged_params = self.params.copy()
-        return merged_params.update(params)
+        merged_params.update(params)
+        return merged_params
 
-    def prepare_proxy(self, proxy: ProxyTypes | None) -> Optional[Proxy]:
+    def prepare_proxy(self, proxy: Optional[ProxyTypes]) -> Optional[Proxy]:
         if proxy is None:
             return None
         if isinstance(proxy, ProxyRotator):
-            return proxy.next()
+            res = proxy.next()
+            return Proxy(res) if isinstance(res, (str, bytes)) else res
         if isinstance(proxy, (str, bytes)):
             return Proxy(proxy)
         if isinstance(proxy, Proxy):
@@ -241,12 +246,12 @@ class BaseClient:
             return Proxy(str(proxy))
         raise ProxyError(f"Unsupported proxy type: {type(proxy)}")
 
-    def prepare_tls_identifier(self, identifier: Optional[str, TLSIdentifierRotator]) -> str:
+    def prepare_tls_identifier(self, identifier: Optional[TLSIdentifierArgTypes]) -> str:
         if isinstance(identifier, str):
             return identifier
         if isinstance(identifier, TLSIdentifierRotator):
-            return identifier.next()
-        return DEFAULT_TLS_IDENTIFIER
+            return str(identifier.next())
+        return str(DEFAULT_TLS_IDENTIFIER)
 
     def prepare_config(self, request: Request, tls_identifier: str = DEFAULT_TLS_IDENTIFIER):
         """Prepare TLS Config"""
@@ -277,16 +282,16 @@ class BaseClient:
         method: str,
         url: URLTypes,
         *,
-        data: RequestData = None,
-        files: RequestFiles = None,
-        json: typing.Any = None,
+        data: Optional[RequestData] = None,
+        files: Optional[RequestFiles] = None,
+        json: Optional[Any] = None,
         params: URLParamTypes = None,
         headers: HeaderTypes = None,
         cookies: CookieTypes = None,
         timeout: TimeoutTypes = None,
-        protocol_racing: bool = None,
-        allow_http: bool = None,
-        stream_id: int = None,
+        protocol_racing: Optional[bool] = None,
+        allow_http: Optional[bool] = None,
+        stream_id: Optional[int] = None,
         **kwargs,
     ) -> Request:
         """Build Request instance"""
@@ -364,7 +369,9 @@ class BaseClient:
         try:
             url = URL(response.headers["Location"])
         except KeyError:
-            raise RemoteProtocolError("Invalid URL in Location headers: %s" % e)
+            raise RemoteProtocolError("Redirect response without 'Location' header.")
+        except Exception as e:
+            raise RemoteProtocolError("Invalid URL in 'Location' header: %s" % e) from e
 
         if not url.netloc:
             for missing_field in ["scheme", "host", "port"]:
@@ -386,11 +393,18 @@ class BaseClient:
 
         setattr(url, "_url", None)  # reset url
         if not url.url:
-            raise RemoteProtocolError("Invalid URL in Location headers: %s" % e)
+            raise RemoteProtocolError("Invalid URL in Location headers.")
 
         return url
 
-    def _send(self, request: Request, *, history: list = None, start: float = None) -> Response:
+    def _send(
+        self,
+        request: Request,
+        *,
+        history: Optional[List[Response]] = None,
+        start: Optional[float] = None,
+    ) -> Response:
+        history = [] if history is None else history
         start = start or time.perf_counter()
         tls_identifier = self.prepare_tls_identifier(self.client_identifier)
         config = self.prepare_config(request, tls_identifier=tls_identifier)
@@ -421,7 +435,7 @@ class BaseClient:
         self.session.destroy_session(self.config.sessionId)
         self._state = ClientState.CLOSED
 
-    def __enter__(self: T) -> T:
+    def __enter__(self: BC) -> BC:
         if self._state == ClientState.OPENED:
             raise RuntimeError("It is not possible to open a client instance more than once.")
 
@@ -431,7 +445,7 @@ class BaseClient:
         self._state = ClientState.OPENED
         return self
 
-    def __exit__(self, *args, **kwargs) -> None:
+    def __exit__(self, *args: Any, **kwargs: Any) -> None:
         self.close()
 
 
@@ -461,20 +475,20 @@ class Client(BaseClient):
         method: str,
         url: URLTypes,
         *,
-        data: RequestData = None,
-        files: RequestFiles = None,
-        json: typing.Any = None,
+        data: Optional[RequestData] = None,
+        files: Optional[RequestFiles] = None,
+        json: Optional[Any] = None,
         params: URLParamTypes = None,
         headers: HeaderTypes = None,
         cookies: CookieTypes = None,
         auth: AuthTypes = None,
         follow_redirects: bool = DEFAULT_FOLLOW_REDIRECTS,
         timeout: TimeoutTypes = DEFAULT_TIMEOUT,
-        protocol_racing: bool = None,
-        allow_http: bool = None,
-        stream_id: int = None,
+        protocol_racing: Optional[bool] = None,
+        allow_http: Optional[bool] = None,
+        stream_id: Optional[int] = None,
         **kwargs,
-    ):
+    ) -> Response:
         """
         Constructs and sends an HTTP request.
 
@@ -518,6 +532,7 @@ class Client(BaseClient):
             protocol_racing=protocol_racing,
             allow_http=allow_http,
             stream_id=stream_id,
+            **kwargs,
         )
         return self.send(request, auth=auth, follow_redirects=follow_redirects)
 
@@ -532,10 +547,13 @@ class Client(BaseClient):
             raise RuntimeError("Cannot send a request, as the client has been closed.")
 
         self._state = ClientState.OPENED
-        for fn in [self.prepare_auth, self.build_hook_request]:
-            request_ = fn(request, auth or self.auth, follow_redirects)
-            if isinstance(request_, Request):
-                request = request_
+        auth_request = self.prepare_auth(request, auth or self.auth)
+        if isinstance(auth_request, Request):
+            request = auth_request
+
+        hook_request = self.build_hook_request(request)
+        if isinstance(hook_request, Request):
+            request = hook_request
 
         self.follow_redirects = follow_redirects
         response = self._send(request, start=time.perf_counter(), history=[])
@@ -545,7 +563,7 @@ class Client(BaseClient):
             self.proxy.mark_result(
                 proxy=response.request.proxy,
                 success=proxy_success,
-                latency=response.elapsed,
+                latency=response.elapsed.total_seconds(),
             )
 
         if self.hooks.get("response"):
@@ -649,9 +667,9 @@ class Client(BaseClient):
         self,
         url: URLTypes,
         *,
-        data: RequestData = None,
-        files: RequestFiles = None,
-        json: typing.Any = None,
+        data: Optional[RequestData] = None,
+        files: Optional[RequestFiles] = None,
+        json: Optional[Any] = None,
         params: URLParamTypes = None,
         headers: HeaderTypes = None,
         cookies: CookieTypes = None,
@@ -684,9 +702,9 @@ class Client(BaseClient):
         self,
         url: URLTypes,
         *,
-        data: RequestData = None,
-        files: RequestFiles = None,
-        json: typing.Any = None,
+        data: Optional[RequestData] = None,
+        files: Optional[RequestFiles] = None,
+        json: Optional[Any] = None,
         params: URLParamTypes = None,
         headers: HeaderTypes = None,
         cookies: CookieTypes = None,
@@ -719,9 +737,9 @@ class Client(BaseClient):
         self,
         url: URLTypes,
         *,
-        data: RequestData = None,
-        files: RequestFiles = None,
-        json: typing.Any = None,
+        data: Optional[RequestData] = None,
+        files: Optional[RequestFiles] = None,
+        json: Optional[Any] = None,
         params: URLParamTypes = None,
         headers: HeaderTypes = None,
         cookies: CookieTypes = None,
@@ -805,12 +823,14 @@ class AsyncClient(BaseClient):
     async def aprepare_headers(self, headers: HeaderTypes = None, user_agent: Optional[str] = None) -> Headers:
         """Prepare Headers. Gets base headers from rotator if available."""
         if headers is None:
+            if self._header_rotator is not None:
+                return await self._header_rotator.anext(user_agent=user_agent)
             return self.headers.copy()
         if isinstance(headers, HeaderRotator):
             return await headers.anext(user_agent=user_agent)
         return Headers(headers)
 
-    async def aprepare_proxy(self, proxy: ProxyTypes | None) -> Optional[Proxy]:
+    async def aprepare_proxy(self, proxy: Optional[ProxyTypes]) -> Optional[Proxy]:
         if proxy is None:
             return None
         if isinstance(proxy, ProxyRotator):
@@ -835,16 +855,16 @@ class AsyncClient(BaseClient):
         method: str,
         url: URLTypes,
         *,
-        data: RequestData = None,
-        files: RequestFiles = None,
-        json: typing.Any = None,
+        data: Optional[RequestData] = None,
+        files: Optional[RequestFiles] = None,
+        json: Optional[Any] = None,
         params: URLParamTypes = None,
         headers: HeaderTypes = None,
         cookies: CookieTypes = None,
         timeout: TimeoutTypes = None,
-        protocol_racing: bool = None,
-        allow_http: bool = None,
-        stream_id: int = None,
+        protocol_racing: Optional[bool] = None,
+        allow_http: Optional[bool] = None,
+        stream_id: Optional[int] = None,
         **kwargs,
     ) -> Request:
         headers = await self.aprepare_headers(headers)
@@ -871,18 +891,18 @@ class AsyncClient(BaseClient):
         method: str,
         url: URLTypes,
         *,
-        data: RequestData = None,
-        files: RequestFiles = None,
-        json: typing.Any = None,
+        data: Optional[RequestData] = None,
+        files: Optional[RequestFiles] = None,
+        json: Optional[Any] = None,
         params: URLParamTypes = None,
         headers: HeaderTypes = None,
         cookies: CookieTypes = None,
         auth: AuthTypes = None,
         follow_redirects: bool = DEFAULT_FOLLOW_REDIRECTS,
         timeout: TimeoutTypes = DEFAULT_TIMEOUT,
-        protocol_racing: bool = None,
-        allow_http: bool = None,
-        stream_id: int = None,
+        protocol_racing: Optional[bool] = None,
+        allow_http: Optional[bool] = None,
+        stream_id: Optional[int] = None,
         **kwargs,
     ) -> Response:
         """Async Request"""
@@ -900,6 +920,7 @@ class AsyncClient(BaseClient):
             protocol_racing=protocol_racing,
             allow_http=allow_http,
             stream_id=stream_id,
+            **kwargs,
         )
         return await self.send(request, auth=auth, follow_redirects=follow_redirects)
 
@@ -994,9 +1015,9 @@ class AsyncClient(BaseClient):
         self,
         url: URLTypes,
         *,
-        data: RequestData = None,
-        files: RequestFiles = None,
-        json: typing.Any = None,
+        data: Optional[RequestData] = None,
+        files: Optional[RequestFiles] = None,
+        json: Optional[Any] = None,
         params: URLParamTypes = None,
         headers: HeaderTypes = None,
         cookies: CookieTypes = None,
@@ -1029,9 +1050,9 @@ class AsyncClient(BaseClient):
         self,
         url: URLTypes,
         *,
-        data: RequestData = None,
-        files: RequestFiles = None,
-        json: typing.Any = None,
+        data: Optional[RequestData] = None,
+        files: Optional[RequestFiles] = None,
+        json: Optional[Any] = None,
         params: URLParamTypes = None,
         headers: HeaderTypes = None,
         cookies: CookieTypes = None,
@@ -1064,9 +1085,9 @@ class AsyncClient(BaseClient):
         self,
         url: URLTypes,
         *,
-        data: RequestData = None,
-        files: RequestFiles = None,
-        json: typing.Any = None,
+        data: Optional[RequestData] = None,
+        files: Optional[RequestFiles] = None,
+        json: Optional[Any] = None,
         params: URLParamTypes = None,
         headers: HeaderTypes = None,
         cookies: CookieTypes = None,
@@ -1133,14 +1154,16 @@ class AsyncClient(BaseClient):
         follow_redirects: bool = DEFAULT_FOLLOW_REDIRECTS,
     ) -> Response:
         if self._state == ClientState.CLOSED:
-            pass  # pass duplicated code
             raise RuntimeError("Cannot send a request, as the client has been closed.")
 
         self._state = ClientState.OPENED
-        for fn in [self.prepare_auth, self.build_hook_request]:
-            request_ = fn(request, auth or self.auth, follow_redirects)
-            if isinstance(request_, Request):
-                request = request_
+        auth_request = self.prepare_auth(request, auth or self.auth)
+        if isinstance(auth_request, Request):
+            request = auth_request
+
+        hook_request = self.build_hook_request(request)
+        if isinstance(hook_request, Request):
+            request = hook_request
 
         self.follow_redirects = follow_redirects
         response = await self._send(request, start=time.perf_counter(), history=[])
@@ -1150,7 +1173,7 @@ class AsyncClient(BaseClient):
             await self.proxy.amark_result(
                 proxy=response.request.proxy,
                 success=proxy_success,
-                latency=response.elapsed,
+                latency=response.elapsed.total_seconds(),
             )
 
         if self.hooks.get("response"):
@@ -1163,7 +1186,14 @@ class AsyncClient(BaseClient):
         await response.aclose()
         return response
 
-    async def _send(self, request: Request, *, history: list = None, start: float = None) -> Response:
+    async def _send(  # type: ignore[override]
+        self,
+        request: Request,
+        *,
+        history: Optional[List[Response]] = None,
+        start: Optional[float] = None,
+    ) -> Response:
+        history = [] if history is None else history
         start = start or time.perf_counter()
         tls_identifier = await self.aprepare_tls_identifier(self.client_identifier)
         config = self.prepare_config(request, tls_identifier=tls_identifier)

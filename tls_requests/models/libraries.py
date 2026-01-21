@@ -46,12 +46,13 @@ if PLATFORM == "linux":
     FILE_EXT = "so"
     try:
         platform_data = platform.freedesktop_os_release()
+        curr_system: Optional[str] = None
         if "ID" in platform_data:
             curr_system = platform_data["ID"]
         else:
             curr_system = platform_data.get("id")
 
-        if "ubuntu" in str(curr_system).lower():
+        if curr_system and "ubuntu" in curr_system.lower():
             IS_UBUNTU = True
 
     except Exception as e:  # noqa
@@ -134,14 +135,14 @@ class TLSLibrary:
             Loads the library, either from an existing path or by discovering and downloading it.
     """
 
-    _PATH: str = None
+    _PATH: Optional[str] = None
     _LIBRARY: Optional[ctypes.CDLL] = None
 
     @staticmethod
     def _parse_version(version_string: str) -> Tuple[int, ...]:
         """Converts a version string (e.g., "v1.11.2") to a comparable tuple (1, 11, 2)."""
         try:
-            parts = version_string.lstrip("v").split(".")
+            parts = str(version_string).lstrip("v").split(".")
             return tuple(map(int, parts))
         except (ValueError, AttributeError):
             return 0, 0, 0
@@ -155,7 +156,7 @@ class TLSLibrary:
         return 0, 0, 0
 
     @classmethod
-    def cleanup_files(cls, keep_file: str = None):
+    def cleanup_files(cls, keep_file: Optional[str] = None):
         """Removes all library files in the BIN_DIR except for the one to keep."""
         for file_path in cls.find_all():
             is_remove = True
@@ -192,7 +193,7 @@ class TLSLibrary:
             logger.error(f"Error saving local release config: {e}")
 
     @classmethod
-    def fetch_api(cls, version: str = None, retries: int = 3):
+    def fetch_api(cls, version: Optional[str] = None, retries: int = 3):
         def _process_data(data):
             releases_data = data if isinstance(data, list) else [data]
 
@@ -205,15 +206,17 @@ class TLSLibrary:
             found_urls = False
             for release in releases:
                 for asset in release.assets:
-                    if IS_UBUNTU and PATTERN_UBUNTU_RE.search(asset.name):
-                        ubuntu_urls.append(asset.browser_download_url)
-                        found_urls = True
-                    if PATTERN_RE.search(asset.name):
-                        asset_urls.append(asset.browser_download_url)
-                        found_urls = True
+                    if asset.name:
+                        if IS_UBUNTU and PATTERN_UBUNTU_RE.search(asset.name):
+                            ubuntu_urls.append(asset.browser_download_url)
+                            found_urls = True
+                        if PATTERN_RE.search(asset.name):
+                            asset_urls.append(asset.browser_download_url)
+                            found_urls = True
             return found_urls
 
-        asset_urls, ubuntu_urls = [], []
+        asset_urls: List[str] = []
+        ubuntu_urls: List[str] = []
         api_data = None
 
         for _ in range(retries):
@@ -266,7 +269,7 @@ class TLSLibrary:
             yield url
 
     @classmethod
-    def find(cls) -> str:
+    def find(cls) -> Optional[str]:
         for fp in cls.find_all():
             if PATTERN_RE.search(fp):
                 return fp
@@ -286,11 +289,12 @@ class TLSLibrary:
             logger.info("Update complete.")
             return downloaded_fp
         logger.error("Update failed.")
+        return None
 
     upgrade = update
 
     @classmethod
-    def download(cls, version: str = None) -> str:
+    def download(cls, version: Optional[str] = None) -> Optional[str]:
         try:
             logger.info(
                 "System Info - Platform: %s, Machine: %s, File Ext : %s."
@@ -345,6 +349,7 @@ class TLSLibrary:
             logger.error("Unable to download file: %s" % ex)
         except Exception as e:
             logger.error("An unexpected error occurred during download: %s" % e)
+        return None
 
     @classmethod
     def set_path(cls, fp: str):

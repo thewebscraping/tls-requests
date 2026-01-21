@@ -27,8 +27,8 @@ class BasicAuth(Auth):
         request.headers["Authorization"] = "Basic %s" % auth_token
 
     def _encode(self, value: Union[str, bytes]) -> bytes:
-        if isinstance(self.username, str):
-            value = value.encode("latin1")
+        if isinstance(value, str):
+            return value.encode("latin1")
 
         if not isinstance(value, bytes):
             raise AuthenticationError("`username` or `password` parameter must be str or byte.")
