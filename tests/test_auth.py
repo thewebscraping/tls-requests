@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from base64 import b64encode
 
 import pytest
@@ -18,7 +20,7 @@ def auth_function(request):
 
 @pytest.fixture
 def auth_url(httpserver):
-    return httpserver.url_for('/auth')
+    return httpserver.url_for("/auth")
 
 
 @pytest.fixture
@@ -55,7 +57,7 @@ def test_client_auth(http_auth, auth_url):
 
 
 def test_client_auth_cross_sharing(http_auth, auth_url):
-    with tls_requests.Client(auth=('1', '2')) as client:
+    with tls_requests.Client(auth=("1", "2")) as client:
         response = client.get(auth_url, auth=auth)
 
     assert response.status_code == 200

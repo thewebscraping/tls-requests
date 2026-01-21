@@ -31,9 +31,7 @@ else:
     jsonlib = json
 
 
-def get_logger(
-    name: str = "TLSRequests", level: Union[int, str] = logging.INFO
-) -> logging.Logger:
+def get_logger(name: str = "TLSRequests", level: Union[int, str] = logging.INFO) -> logging.Logger:
     logger = logging.getLogger(name)
     logger.setLevel(level)
 

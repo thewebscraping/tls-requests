@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import itertools
 import json
 from collections import Counter
@@ -6,8 +8,7 @@ from pathlib import Path
 import pytest
 
 from tls_requests.models.headers import Headers
-from tls_requests.models.rotators import (HeaderRotator, ProxyRotator,
-                                          TLSIdentifierRotator)
+from tls_requests.models.rotators import HeaderRotator, ProxyRotator, TLSIdentifierRotator
 from tls_requests.models.urls import Proxy
 
 
@@ -132,8 +133,7 @@ class TestBaseRotator:
         round_robin_cycle = itertools.cycle(rotator.items)
         expected_round_robin_results = [next(round_robin_cycle) for _ in range(10)]
 
-        assert results != expected_round_robin_results, \
-            "Default strategy produced a predictable round-robin sequence."
+        assert results != expected_round_robin_results, "Default strategy produced a predictable round-robin sequence."
 
 
 class TestRotationStrategies:
@@ -229,9 +229,7 @@ class TestHeaderRotator:
 
         # Find the original header object in the rotator's list that corresponds
         # to the one we pulled (using the unique 'Accept' header from our fixture).
-        original_header_in_list = next(
-            h for h in rotator.items if h["Accept"] == modified_header["Accept"]
-        )
+        original_header_in_list = next(h for h in rotator.items if h["Accept"] == modified_header["Accept"])
 
         # The most important check: ensure the original object was NOT changed.
         assert original_header_in_list["User-Agent"] != custom_ua
@@ -254,9 +252,7 @@ class TestHeaderRotator:
         assert modified_header["User-Agent"] == custom_ua
 
         # Find the original header object in the list
-        original_header_in_list = next(
-            h for h in rotator.items if h["Accept"] == modified_header["Accept"]
-        )
+        original_header_in_list = next(h for h in rotator.items if h["Accept"] == modified_header["Accept"])
 
         # Ensure the original object was NOT changed
         assert original_header_in_list["User-Agent"] != custom_ua

@@ -3,8 +3,7 @@ from __future__ import annotations
 import ipaddress
 import time
 from collections.abc import Mapping, MutableMapping
-from typing import (Any, Dict, ItemsView, Iterator, KeysView, Optional, Union,
-                    ValuesView)
+from typing import Any, Dict, ItemsView, Iterator, KeysView, Optional, Union, ValuesView
 from urllib.parse import ParseResult, quote, unquote, urlencode, urlparse
 
 import idna
@@ -257,7 +256,7 @@ class URL:
             URLError: If the provided URL is invalid.
         """
         self._parsed = self._prepare(url)
-        self._url = None
+        self._url: Optional[str] = None
         self._params = URLParams(params)
 
     @property

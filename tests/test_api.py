@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import tls_requests
 
 RESPONSE_BYTE = b"Hello World!"
@@ -13,7 +15,7 @@ def assert_response(response):
 
 def make_request(request_fn, httpserver, is_assert_response: bool = True):
     httpserver.expect_request("/api").respond_with_data(RESPONSE_BYTE)
-    response = request_fn(httpserver.url_for('/api'))
+    response = request_fn(httpserver.url_for("/api"))
     if is_assert_response:
         assert_response(response)
 

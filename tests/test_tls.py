@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import tls_requests
 from tls_requests.models.tls import TLSConfig
 

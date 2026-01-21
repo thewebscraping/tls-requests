@@ -1,13 +1,13 @@
+from __future__ import annotations
+
 import binascii
 import os
 from io import BufferedReader, BytesIO, TextIOWrapper
 from mimetypes import guess_type
-from typing import (Any, AsyncIterator, Dict, Iterator, List, Mapping,
-                    Optional, Tuple, TypeVar)
+from typing import Any, AsyncIterator, Dict, Iterator, List, Mapping, Optional, Tuple, TypeVar
 from urllib.parse import urlencode
 
-from ..types import (BufferTypes, ByteOrStr, RequestData, RequestFiles,
-                     RequestFileValue, RequestJson)
+from ..types import BufferTypes, ByteOrStr, RequestData, RequestFiles, RequestFileValue, RequestJson
 from ..utils import to_bytes, to_str
 
 __all__ = [

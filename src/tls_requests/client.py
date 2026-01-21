@@ -4,21 +4,49 @@ import datetime
 import time
 import uuid
 from enum import Enum
-from typing import (Any, Callable, List, Literal, Mapping, Optional, Sequence,
-                    TypeVar, Union)
+from typing import Any, Callable, List, Literal, Mapping, Optional, Sequence, TypeVar, Union
 
 from .exceptions import ProxyError, RemoteProtocolError, TooManyRedirects
-from .models import (URL, Auth, BasicAuth, Cookies, HeaderRotator, Headers,
-                     Proxy, ProxyRotator, Request, Response, StatusCodes,
-                     TLSClient, TLSConfig, TLSIdentifierRotator, URLParams)
-from .settings import (DEFAULT_FOLLOW_REDIRECTS, DEFAULT_MAX_REDIRECTS,
-                       DEFAULT_TIMEOUT, DEFAULT_TLS_ALLOW_HTTP,
-                       DEFAULT_TLS_HTTP2, DEFAULT_TLS_IDENTIFIER,
-                       DEFAULT_TLS_PROTOCOL_RACING)
-from .types import (AuthTypes, CookieTypes, HeaderTypes, HookTypes,
-                    ProtocolTypes, ProxyTypes, RequestData, RequestFiles,
-                    TimeoutTypes, TLSIdentifierArgTypes, URLParamTypes,
-                    URLTypes)
+from .models import (
+    URL,
+    Auth,
+    BasicAuth,
+    Cookies,
+    HeaderRotator,
+    Headers,
+    Proxy,
+    ProxyRotator,
+    Request,
+    Response,
+    StatusCodes,
+    TLSClient,
+    TLSConfig,
+    TLSIdentifierRotator,
+    URLParams,
+)
+from .settings import (
+    DEFAULT_FOLLOW_REDIRECTS,
+    DEFAULT_MAX_REDIRECTS,
+    DEFAULT_TIMEOUT,
+    DEFAULT_TLS_ALLOW_HTTP,
+    DEFAULT_TLS_HTTP2,
+    DEFAULT_TLS_IDENTIFIER,
+    DEFAULT_TLS_PROTOCOL_RACING,
+)
+from .types import (
+    AuthTypes,
+    CookieTypes,
+    HeaderTypes,
+    HookTypes,
+    ProtocolTypes,
+    ProxyTypes,
+    RequestData,
+    RequestFiles,
+    TimeoutTypes,
+    TLSIdentifierArgTypes,
+    URLParamTypes,
+    URLTypes,
+)
 from .utils import get_logger
 
 __all__ = ["AsyncClient", "Client"]

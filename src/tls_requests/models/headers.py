@@ -1,7 +1,8 @@
+from __future__ import annotations
+
 from collections.abc import Mapping, MutableMapping
 from enum import Enum
-from typing import (Any, ItemsView, KeysView, List, Literal, Optional, Tuple,
-                    ValuesView)
+from typing import Any, ItemsView, KeysView, List, Literal, Optional, Tuple, ValuesView
 
 from ..exceptions import HeaderError
 from ..types import ByteOrStr, HeaderTypes

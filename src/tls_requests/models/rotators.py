@@ -7,8 +7,7 @@ import random
 import threading
 from abc import ABC, abstractmethod
 from pathlib import Path
-from typing import (Any, Generic, Iterable, Iterator, List, Literal, Optional,
-                    TypeVar, Union)
+from typing import Any, Generic, Iterable, Iterator, List, Literal, Optional, TypeVar, Union
 
 from ..exceptions import RotatorError
 from ..types import HeaderTypes, TLSIdentifierTypes

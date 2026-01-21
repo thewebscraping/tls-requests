@@ -1,17 +1,22 @@
+from __future__ import annotations
+
 import ctypes
 import re
 import uuid
 from dataclasses import asdict, dataclass, field
 from dataclasses import fields as get_fields
-from typing import (Any, Callable, Dict, List, Mapping, Optional, Set, TypeVar,
-                    Union)
+from typing import Any, Callable, Dict, List, Mapping, Optional, Set, TypeVar, Union
 
-from ..settings import (BROWSER_HEADERS, DEFAULT_TIMEOUT,
-                        DEFAULT_TLS_ALLOW_HTTP, DEFAULT_TLS_DEBUG,
-                        DEFAULT_TLS_HTTP2, DEFAULT_TLS_IDENTIFIER,
-                        DEFAULT_TLS_PROTOCOL_RACING)
-from ..types import (MethodTypes, TLSCookiesTypes, TLSIdentifierTypes,
-                     TLSSessionId, URLTypes)
+from ..settings import (
+    BROWSER_HEADERS,
+    DEFAULT_TIMEOUT,
+    DEFAULT_TLS_ALLOW_HTTP,
+    DEFAULT_TLS_DEBUG,
+    DEFAULT_TLS_HTTP2,
+    DEFAULT_TLS_IDENTIFIER,
+    DEFAULT_TLS_PROTOCOL_RACING,
+)
+from ..types import MethodTypes, TLSCookiesTypes, TLSIdentifierTypes, TLSSessionId, URLTypes
 from ..utils import to_base64, to_bytes, to_json
 from .encoders import StreamEncoder
 from .libraries import TLSLibrary
@@ -83,13 +88,13 @@ class TLSClient:
         >>> print(response)
     """
 
-    _library = None
-    _getCookiesFromSession = None
-    _addCookiesToSession = None
-    _destroySession = None
-    _destroyAll = None
-    _request = None
-    _freeMemory = None
+    _library: Optional[Any] = None
+    _getCookiesFromSession: Optional[Callable] = None
+    _addCookiesToSession: Optional[Callable] = None
+    _destroySession: Optional[Callable] = None
+    _destroyAll: Optional[Callable] = None
+    _request: Optional[Callable] = None
+    _freeMemory: Optional[Callable] = None
 
     def __init__(self) -> None:
         if self._library is None:
@@ -109,11 +114,11 @@ class TLSClient:
             setattr(cls, fn_name, getattr(cls._library, name, None))
             fn = getattr(cls, fn_name, None)
             if fn and callable(fn):
-                fn.argtypes = [ctypes.c_char_p]
-                fn.restype = ctypes.c_char_p
+                fn.argtypes = [ctypes.c_char_p]  # type: ignore
+                fn.restype = ctypes.c_char_p  # type: ignore
 
         cls._destroyAll = cls._library.destroyAll
-        cls._destroyAll.restype = ctypes.c_char_p
+        cls._destroyAll.restype = ctypes.c_char_p  # type: ignore
         return cls()
 
     @classmethod
@@ -176,7 +181,9 @@ class TLSClient:
 
     @classmethod
     async def arequest(cls, payload):
-        return await cls._aread(cls._request, payload)
+        if cls._request is None:
+            cls.initialize()
+        return await cls._aread(cls._request, payload)  # type: ignore[arg-type]
 
     @classmethod
     def _send(cls, fn: Callable, payload: dict):
@@ -200,14 +207,8 @@ class _BaseConfig:
     @classmethod
     def from_kwargs(cls: type[T], **kwargs: Any) -> T:
         model_fields_set = cls.model_fields_set()
-        known_kwargs = {
-            cls.to_camel_case(k): v
-            for k, v in kwargs.items() if k in model_fields_set
-        }
-        extra_kwargs = {
-            cls.to_camel_case(k): v
-            for k, v in kwargs.items() if k not in model_fields_set
-        }
+        known_kwargs = {cls.to_camel_case(k): v for k, v in kwargs.items() if k in model_fields_set}
+        extra_kwargs = {cls.to_camel_case(k): v for k, v in kwargs.items() if k not in model_fields_set}
         instance = cls(**known_kwargs)
         instance._extra_kwargs = extra_kwargs
         return instance
@@ -623,7 +624,9 @@ class TLSConfig(_BaseConfig):
                             ua = re.sub(r"rv:\d+", f"rv:{version}", ua)
                             injected_headers["user-agent"] = re.sub(r"Firefox/\d+", f"Firefox/{version}", ua)
                     elif browser == "safari":
-                        match = re.search(r"safari_ios_(\d+)", identifier_str) or re.search(r"safari_(\d+)", identifier_str)
+                        match = re.search(r"safari_ios_(\d+)", identifier_str) or re.search(
+                            r"safari_(\d+)", identifier_str
+                        )
                         if match:
                             version = match.group(1)
                             ua = injected_headers.get("user-agent", "")

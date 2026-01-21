@@ -18,6 +18,10 @@ test-readme:
 pytest:
 	python -m pytest tests
 
+clean:
+	find . -type d -name "__pycache__" -exec rm -rf {} +
+	rm -rf .pytest_cache .mypy_cache .ruff_cache .tox .coverage htmlcov build dist *.egg-info src/*.egg-info
+
 coverage:
 	python -m pytest --cov-config .coveragerc --verbose --cov-report term --cov-report xml --cov=tls_requests tests
 

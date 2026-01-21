@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from pytest_httpserver import HTTPServer
 from werkzeug import Request, Response
 
@@ -35,7 +37,9 @@ def test_response_headers(httpserver: HTTPServer):
 
 
 def test_response_case_insensitive_headers(httpserver: HTTPServer):
-    httpserver.expect_request("/headers").with_post_hook(hook_response_case_insensitive_headers).respond_with_data(b"OK")
+    httpserver.expect_request("/headers").with_post_hook(hook_response_case_insensitive_headers).respond_with_data(
+        b"OK"
+    )
     response = tls_requests.get(httpserver.url_for("/headers"))
     assert response.status_code, 200
     assert response.headers["foo"] == "bar"

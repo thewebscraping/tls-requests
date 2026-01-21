@@ -5,13 +5,29 @@ from typing import Optional
 
 from .client import Client
 from .models import Response
-from .settings import (DEFAULT_FOLLOW_REDIRECTS, DEFAULT_TIMEOUT,
-                       DEFAULT_TLS_ALLOW_HTTP, DEFAULT_TLS_HTTP2,
-                       DEFAULT_TLS_IDENTIFIER, DEFAULT_TLS_PROTOCOL_RACING)
-from .types import (AuthTypes, CookieTypes, HeaderTypes, MethodTypes,
-                    ProtocolTypes, ProxyTypes, RequestData, RequestFiles,
-                    TimeoutTypes, TLSIdentifierArgTypes, TLSIdentifierTypes,
-                    URLParamTypes, URLTypes)
+from .settings import (
+    DEFAULT_FOLLOW_REDIRECTS,
+    DEFAULT_TIMEOUT,
+    DEFAULT_TLS_ALLOW_HTTP,
+    DEFAULT_TLS_HTTP2,
+    DEFAULT_TLS_IDENTIFIER,
+    DEFAULT_TLS_PROTOCOL_RACING,
+)
+from .types import (
+    AuthTypes,
+    CookieTypes,
+    HeaderTypes,
+    MethodTypes,
+    ProtocolTypes,
+    ProxyTypes,
+    RequestData,
+    RequestFiles,
+    TimeoutTypes,
+    TLSIdentifierArgTypes,
+    TLSIdentifierTypes,
+    URLParamTypes,
+    URLTypes,
+)
 
 __all__ = [
     "delete",

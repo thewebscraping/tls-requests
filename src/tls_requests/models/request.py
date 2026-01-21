@@ -1,8 +1,18 @@
+from __future__ import annotations
+
 from typing import Any, Optional, Union
 
 from ..settings import DEFAULT_TIMEOUT
-from ..types import (CookieTypes, HeaderTypes, MethodTypes, RequestData,
-                     RequestFiles, TimeoutTypes, URLParamTypes, URLTypes)
+from ..types import (
+    CookieTypes,
+    HeaderTypes,
+    MethodTypes,
+    RequestData,
+    RequestFiles,
+    TimeoutTypes,
+    URLParamTypes,
+    URLTypes,
+)
 from .cookies import Cookies
 from .encoders import StreamEncoder
 from .headers import Headers

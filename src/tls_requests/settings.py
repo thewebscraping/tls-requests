@@ -47,5 +47,5 @@ BROWSER_HEADERS: Dict[str, Dict[str, str]] = {
         "sec-fetch-dest": "document",
         "sec-fetch-mode": "navigate",
         "sec-fetch-site": "none",
-    }
+    },
 }

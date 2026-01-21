@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import ctypes
 import glob
 import json
@@ -45,17 +47,17 @@ MACHINE = ARCH_MAPPING.get(machine()) or machine()
 if PLATFORM == "linux":
     FILE_EXT = "so"
     try:
-        platform_data = platform.freedesktop_os_release()
-        curr_system: Optional[str] = None
-        if "ID" in platform_data:
-            curr_system = platform_data["ID"]
-        else:
-            curr_system = platform_data.get("id")
+        if hasattr(platform, "freedesktop_os_release"):
+            platform_data = platform.freedesktop_os_release()
+            curr_system: Optional[str] = None
+            if "ID" in platform_data:
+                curr_system = platform_data["ID"]
+            else:
+                curr_system = platform_data.get("id")
 
-        if curr_system and "ubuntu" in curr_system.lower():
-            IS_UBUNTU = True
-
-    except Exception as e:  # noqa
+            if curr_system and "ubuntu" in curr_system.lower():
+                IS_UBUNTU = True
+    except Exception:
         pass
 
 elif PLATFORM in ("win32", "cygwin"):
@@ -71,7 +73,6 @@ TLS_LIBRARY_PATH = os.getenv("TLS_LIBRARY_PATH")
 
 @dataclass
 class BaseRelease:
-
     @classmethod
     def model_fields_set(cls) -> set:
         return {model_field.name for model_field in fields(cls)}
@@ -201,7 +202,9 @@ class TLSLibrary:
 
             if version is not None:
                 version_ = "v%s" % version if not str(version).startswith("v") else str(version)
-                releases = [release for release in releases if re.search(version_, release.name or release.tag_name, re.I)]
+                releases = [
+                    release for release in releases if re.search(version_, release.name or release.tag_name, re.I)
+                ]
 
             found_urls = False
             for release in releases:
@@ -235,7 +238,7 @@ class TLSLibrary:
                             logger.info("Fetched release data from GitHub API.")
                             break
             except Exception as ex:
-                logger.debug(f"GitHub API fetch failed (Attempt {_+1}): {ex}")
+                logger.debug(f"GitHub API fetch failed (Attempt {_ + 1}): {ex}")
 
         if not asset_urls and not ubuntu_urls:
             local_data = cls.import_config()
@@ -388,7 +391,7 @@ class TLSLibrary:
 
         logger.debug(f"Required library version: {LATEST_VERSION_TAG_NAME}")
         local_files = cls.find_all()
-        newest_local_version = (0, 0, 0)
+        newest_local_version: tuple[int, ...] = (0, 0, 0)
         newest_local_file = None
 
         if local_files:

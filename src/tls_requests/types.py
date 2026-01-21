@@ -2,17 +2,42 @@
 Type definitions for type checking purposes.
 """
 
+from __future__ import annotations
+
 from http.cookiejar import CookieJar
 from io import BufferedReader, BytesIO
-from typing import (IO, TYPE_CHECKING, Any, BinaryIO, Callable, Dict, List,
-                    Literal, Mapping, Optional, Sequence, Set, Tuple, Union)
+from typing import (
+    IO,
+    TYPE_CHECKING,
+    Any,
+    BinaryIO,
+    Callable,
+    Dict,
+    List,
+    Literal,
+    Mapping,
+    Optional,
+    Sequence,
+    Set,
+    Tuple,
+    Union,
+)
 from uuid import UUID
 
 if TYPE_CHECKING:  # pragma: no cover
-    from .models import Headers  # noqa: F401
-    from .models import (URL, Auth, BasicAuth, Cookies, HeaderRotator, Proxy,
-                         ProxyRotator, Response, TLSIdentifierRotator,
-                         URLParams)
+    from .models import (
+        URL,
+        Auth,
+        BasicAuth,
+        Cookies,
+        HeaderRotator,
+        Headers,  # noqa: F401
+        Proxy,
+        ProxyRotator,
+        Response,
+        TLSIdentifierRotator,
+        URLParams,
+    )
 
 AuthTypes = Optional[
     Union[

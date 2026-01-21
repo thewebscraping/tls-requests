@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from urllib.parse import unquote
 
 import pytest
@@ -8,7 +10,7 @@ from tls_requests.models.urls import URL, Proxy
 
 
 def request_hook(_request, response):
-    response.headers['x-path'] = _request.full_path
+    response.headers["x-path"] = _request.full_path
     return response
 
 

@@ -1,3 +1,0 @@
-# Base
-chardet~=5.2.0
-idna~=3.10

@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
+import calendar
 import copy
+import time
 from email.message import Message
 from http import cookiejar as cookielib
 from http.cookiejar import Cookie
@@ -33,7 +35,6 @@ class MockResponse:
 
 
 class MockRequest:
-
     def __init__(self, request: Request):
         self._new_headers: Dict[str, str] = {}
         self._request = request
@@ -57,7 +58,7 @@ class MockRequest:
 
         # If they did set it, retrieve it and reconstruct the expected domain
         host = self._headers["Host"]
-        parsed = urlparse(self.request_url)
+        parsed = urlparse(str(self._request.url))
         # Reconstruct the URL as we expect it
         return urlunparse(
             [
@@ -273,13 +274,16 @@ class RequestsCookieJar(cookielib.CookieJar, MutableMapping):
             cookie.value = cookie.value.replace('\\"', "")
         return super().set_cookie(cookie, *args, **kwargs)  # type: ignore
 
-    def update(self, other):  # noqa
+    def update(self, other: Any = None, **kwargs: Any) -> None:  # type: ignore[override]
         """Updates this jar with cookies from another CookieJar or dict-like"""
-        if isinstance(other, cookielib.CookieJar):
-            for cookie in other:
-                self.set_cookie(copy.copy(cookie))
-        else:
-            super().update(other)
+        if other is not None:
+            if isinstance(other, cookielib.CookieJar):
+                for cookie in other:
+                    self.set_cookie(copy.copy(cookie))
+            else:
+                super().update(other)
+        if kwargs:
+            super().update(**kwargs)
 
     def _find(self, name, domain=None, path=None):
         """Requests uses this method internally to get cookie values.
@@ -352,7 +356,7 @@ class RequestsCookieJar(cookielib.CookieJar, MutableMapping):
 
     def get_policy(self):
         """Return the CookiePolicy instance used."""
-        return self._policy
+        return getattr(self, "_policy", None)
 
 
 def extract_cookies_to_jar(cookiejar, response, request):
@@ -512,7 +516,7 @@ def merge_cookies(cookiejar, cookies):
         cookiejar = cookiejar_from_dict(cookies, cookiejar=cookiejar, overwrite=False)
     elif isinstance(cookies, cookielib.CookieJar):
         try:
-            cookiejar.update(cookies)
+            cookiejar.update(cookies)  # type: ignore
         except AttributeError:
             for cookie_in_jar in cookies:
                 cookiejar.set_cookie(cookie_in_jar)
