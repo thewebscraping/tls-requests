@@ -42,6 +42,11 @@ dependencies = [
 dev = [
     "pytest",
     "pytest-asyncio",
+    "pytest-httpserver",
+    "pytest-cov",
+    "werkzeug",
+    "tox",
+    "pre-commit",
     "ruff",
     "mypy",
     "mkdocs-material",
