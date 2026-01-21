@@ -43,7 +43,8 @@ ARCH_MAPPING = {
 }
 
 FILE_EXT = ".unk"
-MACHINE = ARCH_MAPPING.get(machine()) or machine()
+MACHINE_RAW = machine().lower()
+MACHINE = ARCH_MAPPING.get(MACHINE_RAW) or MACHINE_RAW
 if PLATFORM == "linux":
     FILE_EXT = "so"
     try:
@@ -252,12 +253,12 @@ class TLSLibrary:
                 if not v_tag.startswith("v"):
                     v_tag = f"v{v_tag}"
 
-                target_arch = MACHINE
-                if PLATFORM == "windows":
-                    if MACHINE == "amd64":
-                        target_arch = "64"
-                    elif MACHINE == "386":
-                        target_arch = "32"
+                # Mapping for Windows architecture naming convention in bogdanfinn/tls-client
+                win_arch_map = {"amd64": "64", "386": "32"}
+
+                target_arches = [MACHINE]
+                if PLATFORM == "windows" and MACHINE in win_arch_map:
+                    target_arches.insert(0, win_arch_map[MACHINE])
 
                 # Generate a few potential candidates for the fallback URL
                 platforms = [PLATFORM]
@@ -265,13 +266,14 @@ class TLSLibrary:
                     platforms.insert(0, "ubuntu")
 
                 for plat in platforms:
-                    # Try with 'v' and without 'v' in filename as naming patterns vary
-                    for v_str in [v_tag, v_tag.lstrip("v")]:
-                        direct_filename = f"tls-client-{plat}-{target_arch}-{v_str}.{FILE_EXT}"
-                        direct_url = (
-                            f"https://github.com/bogdanfinn/tls-client/releases/download/{v_tag}/{direct_filename}"
-                        )
-                        asset_urls.append(direct_url)
+                    for arch in target_arches:
+                        # Try with 'v' and without 'v' in filename as naming patterns vary
+                        for v_str in [v_tag, v_tag.lstrip("v")]:
+                            direct_filename = f"tls-client-{plat}-{arch}-{v_str}.{FILE_EXT}"
+                            direct_url = (
+                                f"https://github.com/bogdanfinn/tls-client/releases/download/{v_tag}/{direct_filename}"
+                            )
+                            asset_urls.append(direct_url)
 
                 logger.info(f"Fallback: generated direct download URLs: {', '.join(asset_urls)}")
 
