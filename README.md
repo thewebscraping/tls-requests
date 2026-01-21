@@ -33,40 +33,36 @@ pip install git+https://github.com/thewebscraping/tls-requests.git
 **Quick Start**
 ---------------
 
-Start using TLS Requests with just a few lines of code:
+Start using TLS Requests with just a few lines of code. It automatically synchronizes headers based on your chosen browser identifier:
 
 ```pycon
 >>> import tls_requests
->>> r = tls_requests.get("https://httpbin.org/get")
->>> r
-<Response [200 OK]>
->>> r.status_code
-200
+>>> # The library automatically injects matching User-Agent and Sec-CH-UA headers
+>>> r = tls_requests.get("https://httpbin.org/headers", tls_identifier="chrome_133")
+>>> r.json()["headers"]["User-Agent"]
+'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/133.0.0.0 Safari/537.36'
 ```
 
-Basic automatically rotates:
+Basic automatically rotates for proxies and TLS identifiers:
 
 ```pycon
 >>> import tls_requests
->>> proxy_list = [
+>>> proxy_rotator = tls_requests.ProxyRotator([
     "http://user1:pass1@proxy.example.com:8080",
     "http://user2:pass2@proxy.example.com:8081",
     "socks5://proxy.example.com:8082",
-    "proxy.example.com:8083",  #  (defaults to http)
-    "http://user:pass@proxy.example.com:8084|1.0|US",  #  http://user:pass@host:port|weight|region
-]
+    "proxy.example.com:8083",  # defaults to http
+    "http://user:pass@proxy.example.com:8084|1.0|US",  # weight and region support
+])
 >>> r = tls_requests.get(
     "https://httpbin.org/get",
-    proxy=proxy,
-    headers=tls_requests.HeaderRotator(),
+    proxy=proxy_rotator,
     tls_identifier=tls_requests.TLSIdentifierRotator()
 )
 >>> r
 <Response [200 OK]>
 >>> r.status_code
 200
->>> tls_requests.HeaderRotator(strategy = "round_robin")  # strategy: Literal["round_robin", "random", "weighted"]
->>> tls_requests.Proxy("http://user1:pass1@proxy.example.com:8080", weight=0.1)  # default weight: 1.0
 ```
 
 **Introduction**
@@ -113,9 +109,10 @@ making it easy to scrape data or interact with websites that use sophisticated a
 ### **Enhanced Capabilities**
 
 *   **Browser-like TLS Fingerprinting**: Enables secure and reliable browser-mimicking connections.
-*   **High-Performance Backend**: Built on a Go-based HTTP backend for speed and efficiency.
+*   **Dynamic Header Synchronization**: Automatically extracts browser versions from `tls_identifier` and injects them into `User-Agent` and `sec-ch-ua` headers.
+*   **High-Performance Backend**: Built on a Go-based HTTP backend with **Protocol Racing** (Happy Eyeballs) enabled by default for faster connections.
 *   **Synchronous & Asynchronous Support**: Seamlessly switch between synchronous and asynchronous requests.
-*   **Protocol Support**: Fully compatible with HTTP/1.1 and HTTP/2.
+*   **Protocol Support**: Fully compatible with HTTP/1.1, HTTP/2, and HTTP/3 (Alpha).
 *   **Strict Timeouts**: Reliable timeout management for precise control over request durations.
 
 ### **Additional Features**
@@ -126,6 +123,7 @@ making it easy to scrape data or interact with websites that use sophisticated a
 *   **Content Decoding**: Automatic handling of gzip and brotli-encoded responses.
 *   **Hooks**: Perfect for logging, monitoring, tracing, or pre/post-processing requests and responses.
 *   **Unicode Support**: Effortlessly process Unicode response bodies.
+*   **Advanced TLS Options**: Support for `protocol_racing`, `allow_http`, `stream_id`, and `local_address`.
 *   **File Uploads**: Simplified multipart file upload support.
 *   **Proxy Configuration**: Supports Socks5, HTTP, and HTTPS proxies for enhanced privacy.
 
