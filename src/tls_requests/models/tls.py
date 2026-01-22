@@ -200,7 +200,7 @@ class TLSClient:
 class _BaseConfig:
     """Base configuration for TLSSession"""
 
-    _extra_kwargs: dict = field(default_factory=dict, init=False, repr=False)
+    _extra_config: dict = field(default_factory=dict, init=False, repr=False)
 
     @classmethod
     def model_fields_set(cls) -> Set[str]:
@@ -212,13 +212,13 @@ class _BaseConfig:
         known_kwargs = {cls.to_camel_case(k): v for k, v in kwargs.items() if k in model_fields_set}
         extra_kwargs = {cls.to_camel_case(k): v for k, v in kwargs.items() if k not in model_fields_set}
         instance = cls(**known_kwargs)
-        instance._extra_kwargs = extra_kwargs
+        instance._extra_config = extra_kwargs
         return instance
 
     def to_dict(self) -> dict:
         data = asdict(self)
-        if hasattr(self, "_extra_kwargs"):
-            data.update(self._extra_kwargs)
+        if hasattr(self, "_extra_config"):
+            data.update(self._extra_config)
         return {k: v for k, v in data.items() if not k.startswith("_") and v is not None}
 
     def to_payload(self) -> dict:
@@ -552,13 +552,13 @@ class TLSConfig(_BaseConfig):
         kwargs.update(filtered_mapping)
 
         current_kwargs = asdict(self)
-        if hasattr(self, "_extra"):
-            current_kwargs.update(self._extra_kwargs)
+        if hasattr(self, "_extra_config"):
+            current_kwargs.update(self._extra_config)
 
         for k, v in kwargs.items():
             current_kwargs[k] = v
 
-        return self.__class__.from_kwargs(**current_kwargs)
+        return super().from_kwargs(**current_kwargs)
 
     @classmethod
     def from_kwargs(

@@ -35,7 +35,6 @@ dependencies = [
     "idna~=3.10",
     "charset-normalizer",
     "orjson",
-    "chardet~=5.2.0",
 ]
 
 [dependency-groups]
