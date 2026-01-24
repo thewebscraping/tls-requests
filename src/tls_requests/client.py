@@ -141,25 +141,16 @@ class BaseClient:
     ) -> None:
         if "tls_identifier" in config:
             logger.warning(
-                "The 'tls_identifier' parameter is deprecated and will be removed in version 1.3.0. "
-                "Please use 'client_identifier' instead."
+                "The 'client_identifier' parameter is deprecated and will be removed in version 1.3.0. "
+                "Please use 'tls_identifier' instead."
             )
-            if client_identifier == DEFAULT_CLIENT_IDENTIFIER:
-                client_identifier = config.pop("tls_identifier")
-
-        if "tls_debug" in config:
-            logger.warning(
-                "The 'tls_debug' parameter is deprecated and will be removed in version 1.3.0. "
-                "Please use 'debug' instead."
-            )
-            if debug == DEFAULT_DEBUG:
-                debug = config.pop("tls_debug")
+            client_identifier = config.pop("tls_identifier")
 
         self._session = TLSClient.initialize()
         self._config = TLSConfig.from_kwargs(
             http2=http2,
             verify=verify,
-            tls_identifier=self.prepare_tls_identifier(client_identifier),
+            client_identifier=self.prepare_client_identifier(client_identifier),
             debug=debug,
             protocol_racing=protocol_racing,
             allow_http=allow_http,
@@ -297,14 +288,14 @@ class BaseClient:
             return Proxy(str(proxy))
         raise ProxyError(f"Unsupported proxy type: {type(proxy)}")
 
-    def prepare_tls_identifier(self, identifier: Optional[IdentifierArgTypes]) -> str:
+    def prepare_client_identifier(self, identifier: Optional[IdentifierArgTypes]) -> str:
         if isinstance(identifier, str):
             return identifier
         if isinstance(identifier, TLSIdentifierRotator):
             return str(identifier.next())
         return str(DEFAULT_CLIENT_IDENTIFIER)
 
-    def prepare_config(self, request: Request, tls_identifier: str = DEFAULT_CLIENT_IDENTIFIER):
+    def prepare_config(self, request: Request, client_identifier: str = DEFAULT_CLIENT_IDENTIFIER):
         """Prepare TLS Config"""
 
         config = self.config.copy_with(
@@ -317,7 +308,7 @@ class BaseClient:
             timeout=request.timeout,
             http2=True if self.http2 in ["auto", "http2", True, None] else False,
             verify=self.verify,
-            tls_identifier=tls_identifier,
+            client_identifier=client_identifier,
             protocol_racing=request.protocol_racing,
             allow_http=request.allow_http,
             stream_id=request.stream_id,
@@ -457,8 +448,8 @@ class BaseClient:
     ) -> Response:
         history = [] if history is None else history
         start = start or time.perf_counter()
-        tls_identifier = self.prepare_tls_identifier(self.client_identifier)
-        config = self.prepare_config(request, tls_identifier=tls_identifier)
+        client_identifier = self.prepare_client_identifier(self.client_identifier)
+        config = self.prepare_config(request, client_identifier=client_identifier)
         response = Response.from_tls_response(
             self.session.request(config.to_dict()),
             is_byte_response=config.isByteResponse,
@@ -894,7 +885,7 @@ class AsyncClient(BaseClient):
             return Proxy(str(proxy))
         raise ProxyError(f"Unsupported proxy type: {type(proxy)}")
 
-    async def aprepare_tls_identifier(self, identifier) -> str:
+    async def aprepare_client_identifier(self, identifier) -> str:
         if isinstance(identifier, str):
             return identifier
         if isinstance(identifier, TLSIdentifierRotator):
@@ -1246,8 +1237,8 @@ class AsyncClient(BaseClient):
     ) -> Response:
         history = [] if history is None else history
         start = start or time.perf_counter()
-        tls_identifier = await self.aprepare_tls_identifier(self.client_identifier)
-        config = self.prepare_config(request, tls_identifier=tls_identifier)
+        client_identifier = await self.aprepare_client_identifier(self.client_identifier)
+        config = self.prepare_config(request, client_identifier=client_identifier)
         response = Response.from_tls_response(
             await self.session.arequest(config.to_dict()),
             is_byte_response=config.isByteResponse,

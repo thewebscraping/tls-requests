@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import itertools
 import json
 from collections import Counter
@@ -8,7 +9,7 @@ from pathlib import Path
 import pytest
 
 from tls_requests.models.headers import Headers
-from tls_requests.models.rotators import HeaderRotator, ProxyRotator, TLSIdentifierRotator
+from tls_requests.models.rotators import BaseRotator, HeaderRotator, ProxyRotator, RotatorError, TLSIdentifierRotator
 from tls_requests.models.urls import Proxy
 
 
@@ -256,3 +257,75 @@ class TestHeaderRotator:
 
         # Ensure the original object was NOT changed
         assert original_header_in_list["User-Agent"] != custom_ua
+
+
+def test_base_rotator_errors(tmp_path):
+    class ConcreteRotator(BaseRotator):
+        @classmethod
+        def rebuild_item(cls, item):
+            return item
+
+    # Unsupported source type
+    with pytest.raises(RotatorError):
+        ConcreteRotator.from_file(123)
+
+    # Empty rotator next
+    rot = ConcreteRotator()
+    with pytest.raises(ValueError) as exc:
+        rot.next()
+    assert "Rotator is empty" in str(exc.value)
+
+    # Async empty rotator
+    with pytest.raises(ValueError):
+        asyncio.run(rot.anext())
+
+    # Unsupported strategy
+    rot.items = ["a"]
+    rot.strategy = "invalid"
+    with pytest.raises(ValueError):
+        rot._rebuild_iterator()
+
+
+def test_base_rotator_rebuild_item_not_implemented():
+    class MyRotator(BaseRotator):
+        @classmethod
+        def rebuild_item(cls, item):
+            return super().rebuild_item(item)
+
+    # We must instantiate it via a concrete subclass that tries to call the super method
+    with pytest.raises(NotImplementedError):
+        MyRotator.rebuild_item("test")
+
+
+def test_proxy_rotator_extra():
+    # rebuild_item Exception and None branches
+    assert ProxyRotator.rebuild_item(123) is None
+
+    # Weighted strategy rebuild on result
+    p = Proxy("http://ex.com")
+    rot = ProxyRotator([p], strategy="weighted")
+    rot.mark_result(p, True)
+    # This should trigger _rebuild_iterator
+    assert rot._iterator is not None
+
+
+def test_tls_identifier_rotator_extra():
+    rot = TLSIdentifierRotator(["custom"])
+    assert rot.items == ["custom"]
+
+    assert rot.rebuild_item(123) is None
+
+
+def test_header_rotator_extra():
+    rot = HeaderRotator([{"User-Agent": "test"}])
+    assert rot.items[0]["User-Agent"] == "test"
+
+    assert HeaderRotator.rebuild_item(123) is None
+
+
+def test_from_file_json(tmp_path):
+    p = tmp_path / "proxies.json"
+    p.write_text(json.dumps(["http://p1", "http://p2"]))
+    rot = ProxyRotator.from_file(p)
+    assert len(rot) == 2
+    assert isinstance(rot.items[0], Proxy)

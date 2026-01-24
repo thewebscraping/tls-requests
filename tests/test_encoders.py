@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from io import BytesIO
 from mimetypes import guess_type
 from pathlib import Path
 
@@ -7,6 +8,15 @@ import pytest
 from pytest_httpserver import HTTPServer
 
 import tls_requests
+from tls_requests.models.encoders import (
+    BaseEncoder,
+    DataField,
+    FileField,
+    JsonEncoder,
+    MultipartEncoder,
+    StreamEncoder,
+    format_header,
+)
 
 BASE_DIR = Path(__file__).resolve(strict=True).parent.parent
 
@@ -89,3 +99,69 @@ def test_json(httpserver: HTTPServer):
     response = tls_requests.post(httpserver.url_for("/json"), json=data)
     assert response.status_code == 201
     assert response.content == b"OK"
+
+
+def test_format_header_bytes():
+    assert format_header("name", b"value") == b'name="value"'
+
+
+def test_file_field_unpack_variations(tmp_path):
+    # Tuple len 1
+    f = FileField("test", (BytesIO(b"data"),))
+    assert f.filename == "upload"
+
+    # String as value (becomes buffer)
+    f2 = FileField("test", "simple string content")
+    assert f2.filename == "upload"
+    assert f2._buffer.read() == b"simple string content"
+
+    # TextIOWrapper
+    p = tmp_path / "test.txt"
+    p.write_text("hello")
+    with open(p, "r") as tf:
+        f3 = FileField("test", tf)
+        assert f3.filename == "test.txt"
+        assert f3._buffer.read() == b"hello"
+
+    # Invalid buffer type
+    with pytest.raises(ValueError):
+        FileField("test", 123)
+
+
+def test_base_encoder_context_manager():
+    e = BaseEncoder()
+    assert e.closed is False
+    with e as entered:
+        assert entered is e
+    assert e.closed is True
+
+
+def test_multipart_headers_empty():
+    e = MultipartEncoder()
+    assert e.headers == {}
+
+
+def test_stream_encoder_from_bytes():
+    e = StreamEncoder.from_bytes(b"raw data")
+    assert b"".join(e) == b"raw data"
+    assert e.closed is True
+
+
+def test_base_field_properties():
+    f = DataField("foo", "bar")
+    assert b"Content-Disposition" in f.headers
+    assert b"foo" in f.render_parts()
+
+
+def test_async_iter_encoder():
+    import asyncio
+
+    async def run():
+        e = JsonEncoder({"a": 1})
+        chunks = []
+        async for chunk in e:
+            chunks.append(chunk)
+        return b"".join(chunks)
+
+    res = asyncio.run(run())
+    assert b'{"a":1}' in res

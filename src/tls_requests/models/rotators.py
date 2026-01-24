@@ -24,7 +24,7 @@ __all__ = [
 T = TypeVar("T")
 R = TypeVar("R", bound="BaseRotator")
 
-TLS_IDENTIFIER_TEMPLATES = [
+CLIENT_IDENTIFIER_TEMPLATES = [
     "chrome_120",
     "chrome_124",
     "chrome_131",
@@ -237,8 +237,19 @@ class BaseRotator(ABC, Generic[T]):
         self.strategy = strategy
         self._iterator: Optional[Iterator[T]] = None
         self._lock = threading.Lock()
-        self._async_lock = asyncio.Lock()
+        self._async_lock: Optional[asyncio.Lock] = None
         self._rebuild_iterator()
+
+    @property
+    def async_lock(self) -> asyncio.Lock:
+        """
+        Lazily creates and returns an `asyncio.Lock`. This ensures that the lock
+        is created within the correct event loop and avoids issues in
+        synchronous contexts or older Python versions (like 3.9).
+        """
+        if self._async_lock is None:
+            self._async_lock = asyncio.Lock()
+        return self._async_lock
 
     @classmethod
     def from_file(
@@ -354,7 +365,7 @@ class BaseRotator(ABC, Generic[T]):
         Raises:
             ValueError: If the rotator contains no items.
         """
-        async with self._async_lock:
+        async with self.async_lock:
             if not self.items:
                 raise ValueError("Rotator is empty.")
             if self.strategy == "random":
@@ -368,7 +379,7 @@ class BaseRotator(ABC, Generic[T]):
         """
         Adds a new item to the rotator in a coroutine-safe manner.
         """
-        async with self._async_lock:
+        async with self.async_lock:
             self.items.append(item)
             self._rebuild_iterator()
 
@@ -376,7 +387,7 @@ class BaseRotator(ABC, Generic[T]):
         """
         Removes an item from the rotator in a coroutine-safe manner.
         """
-        async with self._async_lock:
+        async with self.async_lock:
             self.items = [i for i in self.items if i != item]
             self._rebuild_iterator()
 
@@ -418,7 +429,7 @@ class ProxyRotator(BaseRotator[Proxy]):
         """
         Coroutine-safely updates a proxy's performance statistics.
         """
-        async with self._async_lock:
+        async with self.async_lock:
             self._update_proxy_stats(proxy, success, latency)
 
     def _update_proxy_stats(self, proxy: Proxy, success: bool, latency: Optional[float] = None):
@@ -442,7 +453,7 @@ class TLSIdentifierRotator(BaseRotator[IdentifierTypes]):
         items: Optional[Iterable[IdentifierTypes]] = None,
         strategy: Literal["round_robin", "random", "weighted"] = "round_robin",
     ) -> None:
-        super().__init__(items or TLS_IDENTIFIER_TEMPLATES, strategy)  # type: ignore[arg-type]
+        super().__init__(items or CLIENT_IDENTIFIER_TEMPLATES, strategy)  # type: ignore[arg-type]
 
     @classmethod
     def rebuild_item(cls, item: Any) -> Optional[IdentifierTypes]:

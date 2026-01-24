@@ -62,7 +62,7 @@ def to_str(
     value = value.decode(encoding) if isinstance(value, (bytes, bytearray)) else value
     if isinstance(value, (dict, list, tuple, set)):
         value = json_dumps(
-            value if isinstance(value, dict) else list[value],
+            value if isinstance(value, dict) else list(value),
             **dict(
                 ensure_ascii=True if str(encoding).lower() == "ascii" else False,
                 default=str,

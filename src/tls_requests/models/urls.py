@@ -339,12 +339,81 @@ class URL:
             url = str(url)
 
         if not isinstance(url, str):
-            raise URLError("Invalid URL: %s" % url)
+            raise URLError(f"Invalid URL: {url}")
+
+        url_to_parse = url.lstrip()
+
+        # 0. Pre-parsing: default to http if scheme is missing
+        if "://" not in url_to_parse and not url_to_parse.startswith("/") and not url_to_parse.startswith("./"):
+            # Check if it doesn't look like a potential relative URL with query/fragment
+            if not (url_to_parse.startswith("?") or url_to_parse.startswith("#")):
+                url_to_parse = f"http://{url_to_parse}"
+
+        # 1. Pre-parsing repair for raw IPv6 addresses
+        if ":" in url_to_parse:
+            # Extract authority candidate: part between scheme and path
+            if "://" in url_to_parse:
+                authority_candidate = url_to_parse.split("://", 1)[1].split("/", 1)[0].split("?", 1)[0].split("#", 1)[0]
+            else:
+                authority_candidate = url_to_parse.split("/", 1)[0].split("?", 1)[0].split("#", 1)[0]
+
+            # Extract host part (ignoring user:pass@)
+            host_candidate = authority_candidate.rsplit("@", 1)[-1]
+
+            # If it looks like IPv6 but lacks brackets
+            if host_candidate.count(":") > 1 and not (host_candidate.startswith("[") and "]" in host_candidate):
+                # Try to determine if it's IP:PORT or just IP
+                # We prioritize IP:PORT if the last part is digits
+                possible_ips = []
+                h_p, _, port = host_candidate.rpartition(":")
+                if port.isdigit() and h_p.count(":") >= 1:
+                    possible_ips.append((h_p, port))
+                possible_ips.append((host_candidate, ""))
+
+                for ip, p_val in possible_ips:
+                    try:
+                        ipaddress.IPv6Address(ip)
+                        repaired = f"[{ip}]"
+                        if p_val:
+                            repaired += f":{p_val}"
+                        url_to_parse = url_to_parse.replace(host_candidate, repaired, 1)
+                        break
+                    except ValueError:
+                        continue
 
         for attr in self.__attrs__:
             setattr(self, attr, None)
 
-        parsed = urlparse(url.lstrip())
+        # 2. Parse and Validate
+        try:
+            # First, check for malformed brackets in the string we're about to parse
+            # We strictly enforce one '[' and one ']' in the authority if any exist
+            authority = ""
+            if "://" in url_to_parse:
+                authority = url_to_parse.split("://", 1)[1].split("/", 1)[0]
+            else:
+                authority = url_to_parse.split("/", 1)[0]
+
+            if "[" in authority or "]" in authority:
+                if authority.count("[") != 1 or authority.count("]") != 1:
+                    raise ValueError("Malformed bracketed host")
+
+                start = authority.find("[")
+                end = authority.find("]")
+                if start > end:
+                    raise ValueError("Invalid bracket order")
+
+                # Content inside brackets MUST be a valid IPv6
+                ip_content = authority[start + 1 : end]
+                try:
+                    ipaddress.IPv6Address(ip_content)
+                except ValueError:
+                    raise ValueError(f"Invalid IPv6 in brackets: {ip_content}")
+
+            parsed = urlparse(url_to_parse)
+
+        except (ValueError, AttributeError) as e:
+            raise URLError(f"Invalid URL: {url}. {str(e)}") from e
 
         self.auth = parsed.username, parsed.password
         self.scheme = parsed.scheme
@@ -363,14 +432,14 @@ class URL:
                 try:
                     self.host = idna.encode(hostname).decode("ascii")
                 except idna.IDNAError:
-                    raise URLError("Invalid IDNA hostname: %s" % hostname)
+                    raise URLError(f"Invalid IDNA hostname: {hostname}")
 
         self.port = ""
         try:
             if parsed.port:
                 self.port = str(parsed.port)
         except ValueError as e:
-            raise URLError("%s. port range must be 0 - 65535." % e.args[0])
+            raise URLError(f"{e.args[0]}. port range must be 0 - 65535.")
 
         self.path = parsed.path
         self.fragment = parsed.fragment
@@ -388,25 +457,28 @@ class URL:
         Returns:
             The final URL string.
         """
-        urls = [self.scheme, "://"]
+        scheme = self.scheme or ""
+        urls = [scheme, "://"] if scheme else []
         authority = self.netloc
         if self.username or self.password:
+            username = self.username or ""
             password = self.password or ""
             if secure:
                 password = "[secure]"
 
             authority = "@".join(
                 [
-                    ":".join([self.username, password]),
+                    ":".join([username, password]),
                     self.netloc,
                 ]
             )
 
         urls.append(authority)
+        path = self.path or ""
         if self.query:
-            urls.append("?".join([self.path, self.query]))
+            urls.append("?".join([path, self.query]))
         else:
-            urls.append(self.path)
+            urls.append(path)
 
         if self.fragment:
             urls.append("#" + self.fragment)

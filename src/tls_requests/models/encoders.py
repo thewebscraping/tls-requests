@@ -4,7 +4,7 @@ import binascii
 import os
 from io import BufferedReader, BytesIO, TextIOWrapper
 from mimetypes import guess_type
-from typing import Any, AsyncIterator, Dict, Iterator, List, Mapping, Optional, Tuple, TypeVar
+from typing import Any, AsyncIterator, Dict, Iterator, List, Mapping, Optional, Tuple, TypeVar, cast
 from urllib.parse import urlencode
 
 from ..types import BufferTypes, ByteOrStr, RequestData, RequestFiles, RequestFileValue, RequestJson
@@ -106,7 +106,7 @@ class FileField(BaseField):
                 if args:
                     content_type = args[0]
             else:
-                buffer = value
+                buffer = value[0]
 
         elif isinstance(value, str):
             buffer = value.encode("utf-8")
@@ -124,12 +124,12 @@ class FileField(BaseField):
                 buffer.close()
                 buffer = open(buffer.name, "rb")
 
-        elif not isinstance(buffer, bytes):
-            raise ValueError
-        else:
+        elif isinstance(buffer, bytes):
             buffer = BytesIO(buffer)
+        elif not hasattr(buffer, "read"):
+            raise ValueError
 
-        return str(filename or "upload"), buffer, str(content_type or "application/octet-stream")
+        return str(filename or "upload"), cast(BufferTypes, buffer), str(content_type or "application/octet-stream")
 
     def render_data(self, chunk_size: int = 65_536) -> Iterator[bytes]:
         yield from iter_buffer(self._buffer, chunk_size)
