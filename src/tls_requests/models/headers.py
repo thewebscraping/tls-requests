@@ -115,7 +115,10 @@ class Headers(MutableMapping):
             self._items.append((key, value))
 
     def __getitem__(self, key):
-        return self.get(key)
+        val = self.get(key)
+        if val is None:
+            raise KeyError(key)
+        return val
 
     def __delitem__(self, key):
         key = self._normalize_key(key)
