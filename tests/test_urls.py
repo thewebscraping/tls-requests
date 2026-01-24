@@ -118,6 +118,38 @@ def test_url_params_normalize_types():
     assert p.normalize(True) == "true"
     assert p.normalize(False) == "false"
     assert p.normalize(b"bytes") == "bytes"
+
+
+def test_url_ipv6_repair_and_validation():
+    # 1. Automatic repair of naked IPv6
+    url = URL("http://2001:db8::1:8080/path")
+    assert url.host == "2001:db8::1"
+    assert url.port == "8080"
+    assert str(url) == "http://[2001:db8::1]:8080/path"
+
+    # Naked IPv6 without port
+    url2 = URL("2001:db8::1")
+    assert url2.host == "2001:db8::1"
+    assert str(url2) == "http://[2001:db8::1]"
+
+    # 2. Strict validation of bracketed hosts
+    with pytest.raises(URLError, match="Invalid IPv6 in brackets"):
+        URL("http://[invalid]")
+
+    with pytest.raises(URLError, match="Malformed bracketed host"):
+        URL("http://[::1]]")
+
+    with pytest.raises(URLError, match="Invalid bracket order"):
+        URL("http://]::1[")
+
+    # Valid bracketed IPv6 with port
+    url3 = URL("http://[::1]:9999")
+    assert url3.host == "::1"
+    assert url3.port == "9999"
+
+
+def test_url_params_normalize_extended():
+    p = URLParams()
     assert p.normalize(1.5) == "1.5"
 
     with pytest.raises(URLParamsError):
