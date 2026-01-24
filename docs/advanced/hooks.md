@@ -1,76 +1,66 @@
-Hooks
-===========================
+# Event Hooks
 
-TLS Requests supports hooks, enabling you to execute custom logic during specific events in the HTTP request/response lifecycle.
-These hooks are perfect for logging, monitoring, tracing, or pre/post-processing requests and responses.
-
+`tls_requests` supports event hooks, enabling you to execute custom logic during specific events in the HTTP request/response lifecycle. These hooks are ideal for logging, monitoring, tracing, or pre/post-processing requests and responses.
 
 * * *
 
-Hook Types
-----------
+## Hook Types
 
-### 1\. **Request Hook**
+### 1. Request Hook
 
-Executed after the request is fully prepared but before being sent to the network. It receives the `request` object, enabling inspection or modification.
+Executed after the request is fully prepared but before being sent to the network. It receives the `request` object as its only argument, allowing for inspection or final modifications.
 
-### 2\. **Response Hook**
+### 2. Response Hook
 
-Triggered after the response is fetched from the network but before being returned to the caller. It receives the `response` object, allowing inspection or processing.
-
+Triggered after the response is received from the network but before being returned to the caller. It receives the `response` object, allowing for data processing or inspection.
 
 * * *
 
-Setting Up Hooks
-----------------
+## Using Hooks
 
-Hooks are registered by providing a dictionary with keys `'request'` and/or `'response'`, and their values are lists of callable functions.
+Hooks are registered by providing a dictionary where keys are `'request'` or `'response'`, and values are lists of callable functions.
 
-### Example 1: Logging Requests and Responses
+### Example: Logging Requests and Responses
 
 ```python
+import tls_requests
+
 def log_request(request):
-    print(f"Request event hook: {request.method} {request.url} - Waiting for response")
+    print(f"Request event: {request.method} {request.url}")
 
 def log_response(response):
-    request = response.request
-    print(f"Response event hook: {request.method} {request.url} - Status {response.status_code}")
+    print(f"Response event: {response.status_code} for {response.url}")
 
-client = tls_requests.Client(hooks={'request': [log_request], 'response': [log_response]})
+# Create a client with hooks
+client = tls_requests.Client(hooks={
+    'request': [log_request],
+    'response': [log_response]
+})
 ```
 
 * * *
 
-### Example 2: Raising Errors on 4xx and 5xx Responses
+### Example: Automatic Error Handling
+
+You can use hooks to automatically raise exceptions for specific status codes:
 
 ```python
+import tls_requests
+
 def raise_on_4xx_5xx(response):
     response.raise_for_status()
 
 client = tls_requests.Client(hooks={'response': [raise_on_4xx_5xx]})
-```
-
-### Example 3: Adding a Timestamp Header to Requests
-
-```python
-import datetime
-
-def add_timestamp(request):
-    request.headers['x-request-timestamp'] = datetime.datetime.utcnow().isoformat()
-
-client = tls_requests.Client(hooks={'request': [add_timestamp]})
-response = client.get('https://httpbin.org/get')
-print(response.text)
+# Requests through this client will now raise errors automatically on failure
 ```
 
 * * *
 
-Managing Hooks
---------------
+## Managing Hooks
 
-### Setting Hooks During Client Initialization
+### During Client Initialization
 
-Provide a dictionary of hooks when creating the client:
+You can pass the `hooks` dictionary when creating a `Client` or `AsyncClient`:
 
 ```python
 client = tls_requests.Client(hooks={
@@ -81,23 +71,25 @@ client = tls_requests.Client(hooks={
 
 ### Dynamically Updating Hooks
 
-Use the `.hooks` property to inspect or modify hooks after the client is created:
+You can update hooks after a client has been initialized using the `.hooks` property:
 
 ```python
 client = tls_requests.Client()
 
-# Add hooks
+# Add a request hook
 client.hooks['request'] = [log_request]
+
+# Add a response hook
 client.hooks['response'] = [log_response]
 
-# Replace hooks
+# Completely replace hooks
 client.hooks = {
     'request': [log_request],
-    'response': [log_response, raise_on_4xx_5xx],
+    'response': [raise_on_4xx_5xx],
 }
 ```
 
-Best Practices
+With event hooks, you can modularize cross-cutting concerns like authentication refreshes, telemetry, and detailed logging.
 --------------
 
 1.  **Access Content**: Use `.read()` or `await .aread()` in asynchronous contexts to access `response.content` before returning it.

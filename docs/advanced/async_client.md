@@ -1,103 +1,91 @@
-Async Support in TLS Requests
-=============================
+# Asynchronous Support
 
-TLS Requests provides support for asynchronous HTTP requests using the `AsyncClient`. This is especially useful when working in an asynchronous environment, such as with modern web frameworks, or when you need the performance benefits of asynchronous I/O.
-
-* * *
-
-Why Use Async?
---------------
-
-*   **Improved Performance:** Async is more efficient than multi-threading for handling high concurrency workloads.
-*   **Long-lived Connections:** Useful for protocols like WebSockets or long polling.
-*   **Framework Compatibility:** Essential when integrating with async web frameworks (e.g., FastAPI, Starlette).
-
-Advanced usage with syntax similar to Client, refer to the [Client documentation](client).
+`tls_requests` provides full support for asynchronous HTTP requests via the `AsyncClient`. This is essential for high-concurrency workloads, long-lived connections, and integration with modern async frameworks like FastAPI.
 
 * * *
 
-Making Async Requests
----------------------
+## Why Use Async?
 
-To send asynchronous HTTP requests, use the `AsyncClient`:
-
-```pycon
->>> import asyncio
->>> import random
->>> import time
->>> import tls_requests
->>> async def fetch(idx, url):
-    async with tls_requests.AsyncClient() as client:
-        rand = random.uniform(0.1, 1.5)
-        start_time = time.perf_counter()
-        print("%s: Sleep for %.2f seconds." % (idx, rand))
-        await asyncio.sleep(rand)
-        response = await client.get(url)
-        end_time = time.perf_counter()
-        print("%s: Took: %.2f" % (idx, (end_time - start_time)))
-        return response
->>> async def run(urls):
-        tasks = [asyncio.create_task(fetch(idx, url)) for idx, url in enumerate(urls)]
-        responses = await asyncio.gather(*tasks)
-        return responses
-
->>> start_urls = [
-    'https://httpbin.org/absolute-redirect/1',
-    'https://httpbin.org/absolute-redirect/2',
-    'https://httpbin.org/absolute-redirect/3',
-    'https://httpbin.org/absolute-redirect/4',
-    'https://httpbin.org/absolute-redirect/5',
-]
-
-
->>> r = asyncio.run(run(start_urls))
->>> r
-[<Response [200]>, <Response [200]>, <Response [200]>, <Response [200]>, <Response [200]>]
-
-```
-
-!!! tip
-    Use [IPython](https://ipython.readthedocs.io/en/stable/) or Python 3.8+ with `python -m asyncio` to try this code interactively, as they support executing `async`/`await` expressions in the console.
+*   **Concurrency**: efficient handling of many simultaneous requests without the overhead of threads.
+*   **Performance**: Improved I/O throughput in data-intensive applications.
+*   **Compatibility**: Seamless integration with the Python `asyncio` ecosystem.
 
 * * *
 
-Key API Differences
--------------------
+## Making Async Requests
 
-When using `AsyncClient`, the API methods are asynchronous and must be awaited.
+To send asynchronous requests, use the `AsyncClient` within an `async` function.
 
-### Making Requests
-
-Use `await` for all request methods:
-
-*   `await client.get(url, ...)`
-*   `await client.post(url, ...)`
-*   `await client.put(url, ...)`
-*   `await client.patch(url, ...)`
-*   `await client.delete(url, ...)`
-*   `await client.options(url, ...)`
-*   `await client.head(url, ...)`
-*   `await client.request(method, url, ...)`
-*   `await client.send(request, ...)`
-
-* * *
-
-### Managing Client Lifecycle
-
-#### Context Manager
-
-For proper resource cleanup, use `async with`:
+### Basic Example
 
 ```python
 import asyncio
+import tls_requests
 
-async def fetch(url):
+async def main():
     async with tls_requests.AsyncClient() as client:
-        response = await client.get(url)
-        return response
+        response = await client.get("https://httpbin.org/get")
+        print(f"Status: {response.status_code}")
+        print(f"Data: {response.json()}")
 
-r = asyncio.run(fetch("https://httpbin.org/get"))
-print(r)  # <Response [200 OK]>
+if __name__ == "__main__":
+    asyncio.run(main())
+```
+
+* * *
+
+## Concurrent Requests
+
+You can use `asyncio.gather` to execute multiple requests in parallel efficiently.
+
+```python
+import asyncio
+import tls_requests
+
+async def fetch_url(client, url):
+    response = await client.get(url)
+    return response.status_code
+
+async def main():
+    urls = [
+        "https://httpbin.org/get",
+        "https://httpbin.org/ip",
+        "https://httpbin.org/user-agent"
+    ]
+
+    async with tls_requests.AsyncClient() as client:
+        tasks = [fetch_url(client, url) for url in urls]
+        results = await asyncio.gather(*tasks)
+        print(f"Results: {results}")
+
+asyncio.run(main())
+```
+
+* * *
+
+## Key Differences from Sync Client
+
+The `AsyncClient` mirrors the `Client` API but requires the `await` keyword for all network operations.
+
+### Async Methods
+All request methods are coroutines:
+
+- `await client.get(url, ...)`
+- `await client.post(url, ...)`
+- `await client.put(url, ...)`
+- `await client.patch(url, ...)`
+- `await client.delete(url, ...)`
+- `await client.request(method, url, ...)`
+
+### Lifecycle Management
+Always use the `async with` context manager to ensure that the underlying TLS sessions are automatically closed and resources are freed.
+
+```python
+async with tls_requests.AsyncClient() as client:
+    # do work
+    ...
+# session is closed here
+```
 ```
 
 #### Manual Closing

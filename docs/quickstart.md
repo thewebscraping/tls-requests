@@ -9,8 +9,10 @@ Importing `tls_requests`
 
 Begin by importing the library:
 
-```pycon
->>> import tls_requests
+```python
+import tls_requests
+import logging
+logging.basicConfig(level=logging.INFO)
 ```
 
 Making HTTP Requests
@@ -20,48 +22,49 @@ Making HTTP Requests
 
 Fetch a webpage using a GET request:
 
-```pycon
->>> r = tls_requests.get('https://httpbin.org/get')
->>> r
+```python
+r = tls_requests.get('https://httpbin.org/get')
+r
 <Response [200 OK]>
+# Cookies now have proper domain backfilled from request URL
 ```
 
 ### POST Request
 
 Make a POST request with data:
 
-```pycon
->>> r = tls_requests.post('https://httpbin.org/post', data={'key': 'value'})
+```python
+r = tls_requests.post('https://httpbin.org/post', data={'key': 'value'})
 ```
 
 ### Other HTTP Methods
 
 Use the same syntax for PUT, DELETE, HEAD, and OPTIONS:
 
-```pycon
->>> r = tls_requests.put('https://httpbin.org/put', data={'key': 'value'})
->>> r
+```python
+r = tls_requests.put('https://httpbin.org/put', data={'key': 'value'})
+r
 <Response [200 OK]>
->>> r = tls_requests.delete('https://httpbin.org/delete')
->>> r
+r = tls_requests.delete('https://httpbin.org/delete')
+r
 <Response [200 OK]>
->>> r = tls_requests.head('https://httpbin.org/get')
+r = tls_requests.head('https://httpbin.org/get')
 <Response [200 OK]>
->>> r
->>> r = tls_requests.options('https://httpbin.org/get')
->>> r
+r
+r = tls_requests.options('https://httpbin.org/get')
+r
 <Response [200 OK]>
 ```
 
 * * *
 
-Using TLS Client Identifiers
-----------------------------
+Using Client Identifiers
+-----------------------
 
-Specify a TLS client profile using the [`tls_identifier`](tls/profiles#internal-profiles) parameter:
+Specify a TLS client profile using the [`client_identifier`](tls/profiles#internal-profiles) parameter:
 
-```pycon
->>> r = tls_requests.get('https://httpbin.org/get', tls_identifier="chrome_120")
+```python
+r = tls_requests.get('https://httpbin.org/get', client_identifier="chrome_120")
 ```
 
 * * *
@@ -71,8 +74,8 @@ HTTP/2 Support
 
 Enable HTTP/2 with the `http2` parameter:
 
-```pycon
->>> r = tls_requests.get('https://httpbin.org/get', http2=True, tls_identifier="chrome_120")  # firefox_120
+```python
+r = tls_requests.get('https://httpbin.org/get', http2=True, client_identifier="chrome_120")
 ```
 
 !!! tip
@@ -88,24 +91,24 @@ URL Parameters
 
 Pass query parameters using the `params` keyword:
 
-```pycon
->>> import tls_requests
->>> params = {'key1': 'value1', 'key2': 'value2'}
->>> r = tls_requests.get('https://httpbin.org/get', params=params)
->>> r.url
+```python
+import tls_requests
+params = {'key1': 'value1', 'key2': 'value2'}
+r = tls_requests.get('https://httpbin.org/get', params=params)
+r.url
 '<URL: https://httpbin.org/get?key1=value1&key2=value2>'
->>> r.url.url
+r.url.url
 'https://httpbin.org/get'
->>> r.url.params
+r.url.params
 <URLParams: dict_items([('key1', 'value1'), ('key2', 'value2')])>
 ```
 
 Include lists or merge parameters with existing query strings:
 
-```pycon
->>> params = {'key1': 'value1', 'key2': ['value2', 'value3']}
->>> r = tls_requests.get('https://httpbin.org/get?order_by=asc', params=params)
->>> r.url
+```python
+params = {'key1': 'value1', 'key2': ['value2', 'value3']}
+r = tls_requests.get('https://httpbin.org/get?order_by=asc', params=params)
+r.url
 '<URL: https://httpbin.org/get?order_by=asc&key1=value1&key2=value2&key2=value3>'
 ```
 
@@ -116,11 +119,11 @@ Custom Headers
 
 Add custom headers to requests:
 
-```pycon
->>> url = 'https://httpbin.org/headers'
->>> headers = {'user-agent': 'my-app/1.0.0'}
->>> r = tls_requests.get(url, headers=headers)
->>> r.json()
+```python
+url = 'https://httpbin.org/headers'
+headers = {'user-agent': 'my-app/1.0.0'}
+r = tls_requests.get(url, headers=headers)
+r.json()
 {
   "headers": {
     ...
@@ -141,9 +144,9 @@ Handling Response Content
 
 Decode response content automatically:
 
-```pycon
->>> r = tls_requests.get('https://httpbin.org/get')
->>> print(r.text)
+```python
+r = tls_requests.get('https://httpbin.org/get')
+print(r.text)
 {
   "args": {},
   "headers": {
@@ -154,7 +157,7 @@ Decode response content automatically:
   },
   ...
 }
->>> r.encoding
+r.encoding
 'UTF-8'
 ```
 
@@ -162,8 +165,8 @@ Decode response content automatically:
 
 Access non-text response content:
 
-```pycon
->>> r.content
+```python
+r.content
 b'{\n  "args": {}, \n  "headers": {\n    "Accept": "*/*", ...'
 ```
 
@@ -171,8 +174,8 @@ b'{\n  "args": {}, \n  "headers": {\n    "Accept": "*/*", ...'
 
 Parse JSON responses directly:
 
-```pycon
->>> r.json()
+```python
+r.json()
 {
   "args": {},
   "headers": {
@@ -189,10 +192,10 @@ Parse JSON responses directly:
 
 Include form data in POST requests:
 
-```pycon
->>> data = {'key1': 'value1', 'key2': 'value2'}
->>> r = tls_requests.post("https://httpbin.org/post", data=data)
->>> print(r.text)
+```python
+data = {'key1': 'value1', 'key2': 'value2'}
+r = tls_requests.post("https://httpbin.org/post", data=data)
+print(r.text)
 {
   "args": {},
   "data": "key1=value1&key1=value2",
@@ -204,10 +207,10 @@ Include form data in POST requests:
 
 Form encoded data can also include multiple values from a given key.
 
-```pycon
->>> data = {'key1': ['value1', 'value2']}
->>> r = tls_requests.post("https://httpbin.org/post", data=data)
->>> print(r.text)
+```python
+data = {'key1': ['value1', 'value2']}
+r = tls_requests.post("https://httpbin.org/post", data=data)
+print(r.text)
 {
   ...
   "form": {
@@ -224,10 +227,10 @@ Form encoded data can also include multiple values from a given key.
 
 Upload files using `files`:
 
-```pycon
->>> files = {'image': open('docs.sh/static/load_library.png', 'rb')}
->>> r = tls_requests.post("https://httpbin.org/post", files=files)
->>> print(r.text)
+```python
+files = {'image': open('static/coingecko.png', 'rb')}
+r = tls_requests.post("https://httpbin.org/get", files=files)
+print(r.text)
 {
   "args": {},
   "data": "",
@@ -240,10 +243,10 @@ Upload files using `files`:
 
 Add custom filenames or MIME types:
 
-```pycon
->>> files = {'image': ('image.png', open('docs.sh/static/load_library.png', 'rb'), 'image/*')}
->>> r = tls_requests.post("https://httpbin.org/post", files=files)
->>> print(r.text)
+```python
+files = {'image': ('image.png', open('static/coingecko.png', 'rb'), 'image/*')}
+r = tls_requests.post("https://httpbin.org/get", files=files)
+print(r.text)
 {
   "args": {},
   "data": "",
@@ -256,11 +259,11 @@ Add custom filenames or MIME types:
 
 If you need to include non-file data fields in the multipart form, use the `data=...` parameter:
 
-```pycon
->>> data = {'key1': ['value1', 'value2']}
->>> files = {'image': open('docs.sh/static/load_library.png', 'rb')}
->>> r = tls_requests.post("https://httpbin.org/post", data=data, files=files)
->>> print(r.text)
+```python
+data = {'key1': ['value1', 'value2']}
+files = {'image': open('static/coingecko.png', 'rb')}
+r = tls_requests.post("https://httpbin.org/get", data=data, files=files)
+print(r.text)
 {
   "args": {},
   "data": "",
@@ -270,7 +273,7 @@ If you need to include non-file data fields in the multipart form, use the `data
   "form": {
     "key1": [
       "value1",
-      "value2"
+      "value1"
     ]
   },
   ...
@@ -281,15 +284,15 @@ If you need to include non-file data fields in the multipart form, use the `data
 
 Send complex JSON data structures:
 
-```pycon
->>> data = {
+```python
+data = {
     'integer': 1,
     'boolean': True,
     'list': ['1', '2', '3'],
     'data': {'key': 'value'}
 }
->>> r = tls_requests.post("https://httpbin.org/post", json=data)
->>> print(r.text)
+r = tls_requests.post("https://httpbin.org/post", json=data)
+print(r.text)
 {
   ...
   "json": {
@@ -317,19 +320,19 @@ Inspecting Responses
 
 Check the HTTP status code:
 
-```pycon
->>> r = tls_requests.get('https://httpbin.org/get')
->>> r.status_code
+```python
+r = tls_requests.get('https://httpbin.org/get')
+r.status_code
 200
 ```
 
 Raise exceptions for non-2xx responses:
 
-```pycon
->>> not_found = tls_requests.get('https://httpbin.org/status/404')
->>> not_found.status_code
+```python
+not_found = tls_requests.get('https://httpbin.org/status/404')
+not_found.status_code
 404
->>> not_found.raise_for_status()
+not_found.raise_for_status()
 ```
 ```text
 Traceback (most recent call last):
@@ -342,10 +345,10 @@ tls_requests.exceptions.HTTPError: 404 Client Error: Not Found for url: https://
 
 Any successful response codes will return the `Response` instance rather than raising an exception.
 
-```pycon
->>> r = tls_requests.get('https://httpbin.org/get')
->>> raw = r.raise_for_status().text
->>> print(raw)
+```python
+r = tls_requests.get('https://httpbin.org/get')
+raw = r.raise_for_status().text
+print(raw)
 {
   "args": {},
   "headers": {
@@ -362,8 +365,8 @@ Any successful response codes will return the `Response` instance rather than ra
 
 Access headers as a dictionary:
 
-```pycon
->>> r.headers
+```python
+r.headers
 <Headers: {
     'access-control-allow-credentials': 'true',
     'access-control-allow-origin': '*',
@@ -377,8 +380,8 @@ Access headers as a dictionary:
 
 The `Headers` data type is case-insensitive, so you can use any capitalization.
 
-```pycon
->>> r.headers['Content-Type']
+```python
+r.headers['Content-Type']
 'application/json'
 ```
 
@@ -386,10 +389,10 @@ The `Headers` data type is case-insensitive, so you can use any capitalization.
 
 Access cookies or include them in requests:
 
-```pycon
->>> url = 'https://httpbin.org/cookies/set?foo=bar'
->>> r = tls_requests.get(url, follow_redirects=True)
->>> r.cookies['foo']
+```python
+url = 'https://httpbin.org/cookies/set?foo=bar'
+r = tls_requests.get(url, follow_redirects=True)
+r.cookies['foo']
 'bar'
 ```
 
@@ -400,25 +403,25 @@ Redirection Handling
 
 Control redirect behavior using the `follow_redirects` parameter:
 
-```pycon
->>> redirect_url = 'https://httpbin.org/absolute-redirect/3'
->>> r = tls_requests.get(redirect_url, follow_redirects=False)
->>> r
+```python
+redirect_url = 'https://httpbin.org/absolute-redirect/3'
+r = tls_requests.get(redirect_url, follow_redirects=False)
+r
 <Response [302]>
->>> r.history
+r.history
 []
->>> r.next
+r.next
 <Request: (GET, https://httpbin.org/absolute-redirect/2)>
 ```
 
 You can modify the default redirection handling with the `follow_redirects` parameter:
 
-```pycon
->>> redirect_url = 'https://httpbin.org/absolute-redirect/3'
->>> r = tls_requests.get(redirect_url, follow_redirects=True)
->>> r.status_code
+```python
+redirect_url = 'https://httpbin.org/absolute-redirect/3'
+r = tls_requests.get(redirect_url, follow_redirects=True)
+r.status_code
 200
->>> r.history
+r.history
 [<Response [302]>, <Response [302]>, <Response [302]>]
 ```
 
@@ -431,8 +434,8 @@ Timeouts
 
 Set custom timeouts:
 
-```pycon
->>> tls_requests.get('https://github.com/', timeout=10)
+```python
+tls_requests.get('https://github.com/', timeout=10)
 ```
 
 * * *
@@ -442,8 +445,8 @@ Authentication
 
 Perform Basic Authentication:
 
-```pycon
->>> r = tls_requests.get("https://httpbin.org/get", auth=("admin", "admin"))
+```python
+r = tls_requests.get("https://httpbin.org/get", auth=("admin", "admin"))
 ```
 
 * * *

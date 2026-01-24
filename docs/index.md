@@ -2,6 +2,13 @@
 **A powerful and lightweight Python library for making secure and reliable HTTP/TLS fingerprint requests.**
 
 * * *
+## Table of Contents
+
+- [Installation](#installation)
+- [Quick Start](#quick-start)
+- [Key Benefits](#key-benefits)
+- [Cookie Management](#cookie-management)
+- [Documentation](#documentation)
 
 **Installation**
 ----------------
@@ -11,7 +18,11 @@ To install the library, you can choose between two methods:
 #### **1\. Install via PyPI:**
 
 ```shell
+# Using pip
 pip install wrapper-tls-requests
+
+# Using uv
+uv add wrapper-tls-requests
 ```
 
 #### **2\. Install via GitHub Repository:**
@@ -20,16 +31,27 @@ pip install wrapper-tls-requests
 pip install git+https://github.com/thewebscraping/tls-requests.git
 ```
 
+> **Note**: After installation you can update the TLS library manually using:
+> ```bash
+> python -m tls_requests.models.libraries
+> ```
+>
+> **Logging**: The library now uses the standard `logging` module. Configure it in your application, e.g.:
+> ```python
+> import logging
+> logging.basicConfig(level=logging.INFO)
+> ```
+
 ### Quick Start
 
 Start using TLS Requests with just a few lines of code:
 
-```pycon
->>> import tls_requests
->>> r = tls_requests.get("https://httpbin.org/get")
->>> r
+```python
+import tls_requests
+r = tls_requests.get("https://httpbin.org/get")
+r
 <Response [200 OK]>
->>> r.status_code
+r.status_code
 200
 ```
 
@@ -66,10 +88,10 @@ Modern websites increasingly use **TLS Fingerprinting** and anti-bot tools like 
 
 **Example Code:**
 
-```pycon
->>> import tls_requests
->>> r = tls_requests.get('https://www.coingecko.com/')
->>> r
+```python
+import tls_requests
+r = tls_requests.get('https://www.coingecko.com/')
+r
 <Response [200]>
 ```
 * * *

@@ -1,21 +1,24 @@
+from __future__ import annotations
+
 import binascii
 import codecs
 import datetime
+import typing
 from email.message import Message
 from typing import Any, Callable, Optional, TypeVar, Union
 
-from tls_requests.exceptions import Base64DecodeError, HTTPError
-from tls_requests.models.cookies import Cookies
-from tls_requests.models.encoders import StreamEncoder
-from tls_requests.models.headers import Headers
-from tls_requests.models.request import Request
-from tls_requests.models.status_codes import StatusCodes
-from tls_requests.models.tls import TLSResponse
-from tls_requests.settings import CHUNK_SIZE
-from tls_requests.types import CookieTypes, HeaderTypes, ResponseHistory
-from tls_requests.utils import b64decode, chardet, to_json
+from ..exceptions import Base64DecodeError, HTTPError
+from ..settings import CHUNK_SIZE
+from ..types import CookieTypes, HeaderTypes, ResponseHistory
+from ..utils import b64decode, chardet, to_json
+from .cookies import Cookies
+from .encoders import StreamEncoder
+from .headers import Headers
+from .request import Request
+from .status_codes import StatusCodes
+from .tls import TLSResponse
 
-__all__ = ["Response"]
+__all__ = ("Response",)
 
 T = TypeVar("T", bound="Response")
 
@@ -33,30 +36,30 @@ class Response:
         self,
         status_code: int,
         *,
-        headers: HeaderTypes = None,
+        headers: Optional[HeaderTypes] = None,
         cookies: CookieTypes = None,
-        request: Union[Request] = None,
-        history: ResponseHistory = None,
-        body: bytes = None,
-        stream: StreamEncoder = None,
-        default_encoding: Union[str, Callable] = "utf-8",
+        request: Optional[Request] = None,
+        history: Optional[ResponseHistory] = None,
+        body: Optional[bytes] = None,
+        stream: Optional[StreamEncoder] = None,
+        default_encoding: Union[str, Callable[..., Any]] = "utf-8",
     ) -> None:
-        self._content = None
-        self._elapsed = None
-        self._encoding = None
-        self._text = None
-        self._response_id = None
-        self._http_version = None
+        self._content: bytes = b""
+        self._elapsed: Optional[datetime.timedelta] = None
+        self._encoding: Optional[str] = None
+        self._text: Optional[str] = None
+        self._response_id: str = ""
+        self._http_version: str = "HTTP/1.1"
         self._request: Optional[Request] = request
         self._cookies = Cookies(cookies)
         self._is_stream_consumed = False
         self._is_closed = False
         self._next: Optional[Request] = None
         self.headers = Headers(headers)
-        self.stream = None
         self.status_code = status_code
         self.history = history if isinstance(history, list) else []
         self.default_encoding = default_encoding
+        self.stream: Optional[StreamEncoder] = None
         if isinstance(stream, StreamEncoder):
             self.stream = stream
         else:
@@ -68,7 +71,7 @@ class Response:
 
     @property
     def elapsed(self) -> datetime.timedelta:
-        return self._elapsed
+        return self._elapsed or datetime.timedelta(0)
 
     @elapsed.setter
     def elapsed(self, elapsed: datetime.timedelta) -> None:
@@ -77,9 +80,7 @@ class Response:
     @property
     def request(self) -> Request:
         if self._request is None:
-            raise RuntimeError(
-                "The request instance has not been set on this response."
-            )
+            raise RuntimeError("The request instance has not been set on this response.")
         return self._request
 
     @request.setter
@@ -101,9 +102,14 @@ class Response:
 
     @property
     def cookies(self) -> Cookies:
-        if self._cookies is None:
-            self._cookies = Cookies()
-            self._cookies.extract_cookies(self, self.request)
+        if self._request:
+            # Fix missing domain in cookies by backfilling from request URL
+            # Ref: https://github.com/thewebscraping/tls-requests/issues/47
+            for cookie in self._cookies.cookiejar:
+                if not cookie.domain:
+                    cookie.domain = self._request.url.host
+                    cookie.domain_specified = False
+                    cookie.domain_initial_dot = False
         return self._cookies
 
     @property
@@ -135,23 +141,33 @@ class Response:
             msg = Message()
             msg["content-type"] = self.headers["Content-Type"]
             return msg.get_content_charset(failobj=None)
+        return None
 
     @property
     def encoding(self) -> str:
         if self._encoding is None:
-            encoding = self.charset
-            if encoding is None:
-                if isinstance(self.default_encoding, str):
-                    try:
-                        codecs.lookup(self.default_encoding)
-                        encoding = self.default_encoding
-                    except LookupError:
-                        pass
+            encoding = self.charset or self.default_encoding
+            if not encoding and chardet and self.content:
+                encoding = chardet.detect(self.content)["encoding"]
+            try:
+                if encoding:
+                    # fix: charset=utf-8,gbk
+                    if callable(encoding):
+                        encoding = typing.cast(str, encoding(self))
 
-                if not encoding and chardet and self.content:
-                    encoding = chardet.detect(self.content)["encoding"]
+                    if isinstance(encoding, str):
+                        encoding = encoding.split(",")[0].strip()
+                        codecs.lookup(encoding)
+                        self._encoding = encoding
+                else:
+                    raise LookupError
+            except LookupError:
+                self._encoding = "utf-8"  # fallback to utf-8
 
-            self._encoding = encoding or "utf-8"
+        # Always ensure self._encoding is not None at this point
+        if self._encoding is None:
+            self._encoding = "utf-8"
+
         return self._encoding
 
     @property
@@ -191,13 +207,10 @@ class Response:
             raise HTTPError(
                 http_error_msg.format(
                     self.status_code,
-                    (
-                        self.reason
-                        if self.status_code < 100
-                        else StatusCodes.get_reason(self.status_code)
-                    ),
+                    (self.reason if self.status_code < 100 else StatusCodes.get_reason(self.status_code)),
                     self.url,
-                )
+                ),
+                response=self,
             )
 
         return self
@@ -209,11 +222,15 @@ class Response:
         return f"<Response [{self.status_code}]>"
 
     def read(self) -> bytes:
+        if self.stream is None:
+            return b""
         with self.stream as stream:
             self._content = b"".join(stream.render())
             return self._content
 
     async def aread(self) -> bytes:
+        if self.stream is None:
+            return b""
         with self.stream as stream:
             self._content = b"".join([chunk async for chunk in stream])
             return self._content
@@ -226,25 +243,26 @@ class Response:
         if not self._is_closed:
             self._is_closed = True
             self._is_stream_consumed = True
-            self.stream.close()
+            if self.stream:
+                self.stream.close()
+
+        # Fix pickle dump
+        # Ref: https://github.com/thewebscraping/tls-requests/issues/35
+        self.stream = None
 
     async def aclose(self) -> None:
         return self.close()
 
     @classmethod
-    def from_tls_response(
-        cls, response: TLSResponse, is_byte_response: bool = False
-    ) -> "Response":
+    def from_tls_response(cls, response: TLSResponse, is_byte_response: bool = False) -> "Response":
         def _parse_response_body(value: Optional[str]) -> bytes:
             if value:
                 if is_byte_response and response.status > 0:
                     try:
-                        value = b64decode(value.split(",")[-1])
-                        return value
+                        content = b64decode(value.split(",")[-1])
+                        return content
                     except (binascii.Error, AssertionError):
-                        raise Base64DecodeError(
-                            "Couldn't decode the base64 string into bytes."
-                        )
+                        raise Base64DecodeError("Couldn't decode the base64 string into bytes.")
                 return value.encode("utf-8")
             return b""
 
@@ -254,6 +272,6 @@ class Response:
             headers=response.headers,
             cookies=response.cookies,
         )
-        ret._response_id = response.id
-        ret._http_version = response.usedProtocol
+        ret._response_id = response.id or ""
+        ret._http_version = response.usedProtocol or "HTTP/1.1"
         return ret

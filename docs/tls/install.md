@@ -1,28 +1,53 @@
-## Auto Download
+# Installing TLS Binaries
 
-This approach simplifies usage as it automatically detects your OS and downloads the appropriate version of the library. To use it:
+The `tls_requests` library requires a native binary (`.so`, `.dll`, or `.dylib`) to handle the underlying TLS fingerprinting. The library is designed to manage these binaries automatically.
 
-```pycon
->>> import tls_requests
->>> r = tls_requests.get('https://httpbin.org/get')
+* * *
+
+## Automatic Management
+
+This is the recommended approach. When you first use `tls_requests` to make a request, it will automatically detect your operating system and architecture, download the appropriate binary, and store it in the library's internal `bin/` directory.
+
+```python
+import tls_requests
+
+# The first call will trigger the binary download if it doesn't exist
+response = tls_requests.get('https://httpbin.org/get')
+print(response.status_code)
 ```
 
-!!! note:
-    The library takes care of downloading necessary files and stores them in the `tls_requests/bin` directory.
+!!! note
+    The binaries are cached locally. Subsequent requests will reuse the existing binary without any network overhead.
+
+* * *
 
 ## Manual Download
 
-If you want more control, such as selecting a specific version of the library, you can use the manual method:
+If your environment has restricted internet access or if you need a specific version of the underlying `tls-client` library, you can trigger a download manually.
 
-```pycon
->>> from tls_requests.models.libraries import TLSLibrary
->>> TLSLibrary.download('1.7.10')
+```python
+from tls_requests import TLSLibrary
+
+# Download a specific version
+TLSLibrary.download(version='1.13.1')
 ```
 
-This method is useful if you need to ensure compatibility with specific library versions.
+This ensures the binary is ready before your main application code begins execution.
 
-### Notes
+* * *
 
-1.  **Dependencies**: Ensure Python is installed and configured correctly in your environment.
-2.  **Custom Directory**: If needed, the library’s downloaded binaries can be relocated manually to suit specific project structures.
-3.  **Reference**: [TLS Client GitHub Releases](https://github.com/bogdanfinn/tls-client/releases/) provides details about available versions and updates.
+## Advanced Configuration
+
+### Custom Binary Path
+You can override the automatic discovery by setting the `TLS_LIBRARY_PATH` environment variable to the absolute path of a compatible binary.
+
+```bash
+export TLS_LIBRARY_PATH=/path/to/your/custom/library.so
+```
+
+### Dependencies
+- **Python**: 3.9 or higher.
+- **Operating Systems**: Windows, macOS (Intel/Apple Silicon), and most Linux distributions (Ubuntu, Debian, CentOS, etc.).
+- **Architecture**: x86_64 (amd64), ARM64, and others.
+
+For more information on the available versions, refer to the [TLS Client GitHub Releases](https://github.com/bogdanfinn/tls-client/releases/).

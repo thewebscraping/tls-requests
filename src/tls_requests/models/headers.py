@@ -1,12 +1,17 @@
-from abc import ABC
+from __future__ import annotations
+
 from collections.abc import Mapping, MutableMapping
 from enum import Enum
-from typing import Any, ItemsView, KeysView, List, Literal, Tuple, ValuesView
+from typing import Any, ItemsView, KeysView, List, Literal, Optional, Tuple, ValuesView
 
-from tls_requests.types import ByteOrStr, HeaderTypes
-from tls_requests.utils import to_str
+from ..exceptions import HeaderError
+from ..types import ByteOrStr, HeaderTypes
+from ..utils import to_str
 
-__all__ = ["Headers"]
+__all__ = (
+    "Headers",
+    "HeaderAlias",
+)
 
 HeaderAliasTypes = Literal["*", "lower", "capitalize"]
 
@@ -16,23 +21,14 @@ class HeaderAlias(str, Enum):
     CAPITALIZE = "capitalize"
     ALL = "*"
 
-    def __contains__(self, key: str) -> bool:
-        for item in self:
-            if item == key:
-                return True
-        return False
+    @classmethod
+    def contains(cls, key: Any) -> bool:
+        return any(item.value == key for item in cls)
 
 
-class Headers(MutableMapping, ABC):
-    def __init__(
-        self,
-        headers: HeaderTypes = None,
-        *,
-        alias: HeaderAliasTypes = HeaderAlias.LOWER
-    ):
-        self.alias = (
-            alias if alias in HeaderAlias._value2member_map_ else HeaderAlias.LOWER
-        )
+class Headers(MutableMapping):
+    def __init__(self, headers: Optional[HeaderTypes] = None, *, alias: HeaderAliasTypes = "lower"):
+        self.alias: HeaderAliasTypes = alias if HeaderAlias.contains(alias) else "lower"
         self._items = self._prepare_items(headers)
 
     def get(self, key: str, default: Any = None) -> Any:
@@ -51,19 +47,20 @@ class Headers(MutableMapping, ABC):
     def values(self) -> ValuesView:
         return {k: v for k, v in self.items()}.values()
 
-    def update(self, headers: HeaderTypes) -> "Headers":  # noqa
-        headers = self.__class__(headers, alias=self.alias)  # noqa
-        for idx, (key, _) in enumerate(headers._items):
+    def update(self, headers: Optional[HeaderTypes]) -> None:  # type: ignore[override]
+        if headers is None:
+            return
+        new_headers = self.__class__(headers, alias=self.alias)
+        for key, _ in new_headers._items:
             if key in self:
                 self.pop(key)
 
-        self._items.extend(headers._items)
-        return self
+        self._items.extend(new_headers._items)
 
     def copy(self) -> "Headers":
-        return self.__class__(self._items.copy(), alias=self.alias)  # noqa
+        return self.__class__(self._items.copy(), alias=self.alias)  # type: ignore[arg-type]
 
-    def _prepare_items(self, headers: HeaderTypes) -> List[Tuple[str, Any]]:
+    def _prepare_items(self, headers: Optional[HeaderTypes]) -> List[Tuple[str, List[str]]]:
         if headers is None:
             return []
         if isinstance(headers, self.__class__):
@@ -74,9 +71,9 @@ class Headers(MutableMapping, ABC):
             try:
                 items = [self._normalize(k, args[0]) for k, *args in headers]
                 return items
-            except IndexError:
+            except (IndexError, ValueError):
                 pass
-        raise TypeError
+        raise HeaderError("Invalid headers format")
 
     def _normalize_key(self, key: ByteOrStr) -> str:
         key = to_str(key, encoding="ascii")
@@ -90,13 +87,13 @@ class Headers(MutableMapping, ABC):
 
     def _normalize_value(self, value) -> List[str]:
         if isinstance(value, dict):
-            raise TypeError
+            raise HeaderError("Header value cannot be a dictionary.")
 
         if isinstance(value, (list, tuple, set)):
             items = []
             for item in value:
                 if isinstance(item, dict):
-                    raise TypeError
+                    raise HeaderError("Header value items cannot be a dictionary.")
                 items.append(to_str(item))
             return items
 
@@ -110,8 +107,7 @@ class Headers(MutableMapping, ABC):
         key, value = self._normalize(key, value)
         for idx, (k, _) in enumerate(self._items):
             if k == key:
-                values = [v for v in value if v not in self._items[idx][1]]
-                self._items[idx][1].extend(values)
+                self._items[idx] = (k, value)
                 found = True
                 break
 
@@ -119,7 +115,10 @@ class Headers(MutableMapping, ABC):
             self._items.append((key, value))
 
     def __getitem__(self, key):
-        return self.get(key)
+        val = self.get(key)
+        if val is None:
+            raise KeyError(key)
+        return val
 
     def __delitem__(self, key):
         key = self._normalize_key(key)
@@ -143,17 +142,21 @@ class Headers(MutableMapping, ABC):
         return (k for k, _ in self._items)
 
     def __len__(self):
-        return len(self._headers)
+        return len(self._items)
 
-    def __eq__(self, other: HeaderTypes):
-        items = sorted(self._items)
-        other = sorted(self._prepare_items(other))
-        return items == other
+    def __eq__(self, other: object) -> bool:
+        if not isinstance(other, (Mapping, list, tuple, set, self.__class__)):
+            return False
+
+        try:
+            items = sorted(self._items)
+            other_prepared = sorted(self._prepare_items(other))  # type: ignore
+            return items == other_prepared
+        except (HeaderError, TypeError):
+            return False
 
     def __repr__(self):
-        SECURE = [
-            self._normalize_key(key) for key in ["Authorization", "Proxy-Authorization"]
-        ]
+        SECURE = [self._normalize_key(key) for key in ["Authorization", "Proxy-Authorization"]]
         return "<%s: %s>" % (
             self.__class__.__name__,
             {k: "[secure]" if k in SECURE else ",".join(v) for k, v in self._items},

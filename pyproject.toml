@@ -1,6 +1,142 @@
 [build-system]
-requires = ['setuptools>=40.8.0']
-build-backend = 'setuptools.build_meta'
+requires = ["hatchling", "uv-dynamic-versioning"]
+build-backend = "hatchling.build"
+
+[project]
+name = "wrapper-tls-requests"
+dynamic = ["version"]
+description = "A powerful and lightweight Python library for making secure and reliable HTTP/TLS fingerprint requests."
+readme = "README.md"
+requires-python = ">=3.8"
+license = "MIT"
+authors = [
+    { name = "Tu Pham", email = "thetwofarm@gmail.com" },
+]
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "Intended Audience :: Developers",
+    "Environment :: Web Environment",
+    "License :: OSI Approved :: MIT License",
+    "Natural Language :: English",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3 :: Only",
+    "Topic :: Internet :: WWW/HTTP",
+    "Topic :: Software Development :: Libraries",
+]
+dependencies = [
+    "idna~=3.10",
+    "charset-normalizer",
+    "orjson",
+]
+
+[dependency-groups]
+dev = [
+    "pytest",
+    "pytest-asyncio",
+    "pytest-httpserver",
+    "pytest-cov",
+    "werkzeug",
+    "tox",
+    "pre-commit",
+    "mkautodoc",
+    "ruff",
+    "mypy",
+    "mkdocs-material",
+    "mkdocs",
+    "mkdocstrings[python]",
+]
+
+[project.urls]
+Sponsor = "https://github.com/sponsors/thewebscraping"
+Changelog = "https://github.com/thewebscraping/tls-requests/blob/main/CHANGELOG.md"
+Documentation = "https://thewebscraping.github.io/tls-requests/"
+Source = "https://github.com/thewebscraping/tls-requests"
+Homepage = "https://github.com/thewebscraping/tls-requests"
+
+[tool.hatch.version]
+source = "uv-dynamic-versioning"
+
+[tool.uv-dynamic-versioning]
+fallback-version = "0.0.0"
+
+[tool.hatch.build.targets.sdist]
+include = ["src/tls_requests"]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/tls_requests"]
 
 [tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]
 asyncio_mode = "auto"
+
+[tool.mypy]
+python_version = "3.9"
+show_error_codes = true
+ignore_missing_imports = true
+warn_unused_configs = true
+check_untyped_defs = true
+disallow_untyped_defs = false
+
+[[tool.mypy.overrides]]
+module = "tests.*"
+ignore_errors = true
+
+[tool.ruff]
+include = ["pyproject.toml", "src/**/*.py", "scripts/**/*.py"]
+line-length = 120
+indent-width = 4
+target-version = "py311"
+
+exclude = [
+    ".bzr",
+    ".direnv",
+    ".eggs",
+    ".git",
+    ".git-rewrite",
+    ".hg",
+    ".ipynb_checkpoints",
+    ".mypy_cache",
+    ".nox",
+    ".pants.d",
+    ".pyenv",
+    ".pytest_cache",
+    ".pytype",
+    ".ruff_cache",
+    ".svn",
+    ".tox",
+    ".venv",
+    ".vscode",
+    "__pypackages__",
+    "_build",
+    "buck-out",
+    "build",
+    "dist",
+    "node_modules",
+    "site-packages",
+    "venv",
+]
+
+[tool.ruff.lint]
+select = ["E4", "E7", "E9", "F", "I"]
+ignore = []
+
+[tool.ruff.lint.per-file-ignores]
+"__init__.py" = ["F401", "F403", "F405"]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+skip-magic-trailing-comma = false
+line-ending = "auto"
+
+[tool.ruff.lint.isort]
+required-imports = ["from __future__ import annotations"]

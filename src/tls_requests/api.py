@@ -1,16 +1,35 @@
 from __future__ import annotations
 
-import typing
+from typing import Any, Optional
 
 from .client import Client
 from .models import Response
-from .settings import (DEFAULT_FOLLOW_REDIRECTS, DEFAULT_TIMEOUT,
-                       DEFAULT_TLS_HTTP2, DEFAULT_TLS_IDENTIFIER)
-from .types import (AuthTypes, CookieTypes, HeaderTypes, MethodTypes,
-                    ProtocolTypes, ProxyTypes, RequestData, RequestFiles,
-                    TimeoutTypes, TLSIdentifierTypes, URLParamTypes, URLTypes)
+from .settings import (
+    DEFAULT_ALLOW_HTTP,
+    DEFAULT_CLIENT_IDENTIFIER,
+    DEFAULT_DEBUG,
+    DEFAULT_FOLLOW_REDIRECTS,
+    DEFAULT_HTTP2,
+    DEFAULT_PROTOCOL_RACING,
+    DEFAULT_TIMEOUT,
+)
+from .types import (
+    AuthTypes,
+    CookieTypes,
+    HeaderTypes,
+    IdentifierArgTypes,
+    IdentifierTypes,
+    MethodTypes,
+    ProtocolTypes,
+    ProxyTypes,
+    RequestData,
+    RequestFiles,
+    TimeoutTypes,
+    URLParamTypes,
+    URLTypes,
+)
 
-__all__ = [
+__all__ = (
     "delete",
     "get",
     "head",
@@ -19,7 +38,7 @@ __all__ = [
     "post",
     "put",
     "request",
-]
+)
 
 
 def request(
@@ -27,18 +46,22 @@ def request(
     url: URLTypes,
     *,
     params: URLParamTypes = None,
-    data: RequestData = None,
-    files: RequestFiles = None,
-    json: typing.Any = None,
+    data: Optional[RequestData] = None,
+    files: Optional[RequestFiles] = None,
+    json: Any = None,
     headers: HeaderTypes = None,
     cookies: CookieTypes = None,
     auth: AuthTypes = None,
     proxy: ProxyTypes = None,
-    http2: ProtocolTypes = DEFAULT_TLS_HTTP2,
+    http2: ProtocolTypes = DEFAULT_HTTP2,
     timeout: TimeoutTypes = DEFAULT_TIMEOUT,
     follow_redirects: bool = DEFAULT_FOLLOW_REDIRECTS,
     verify: bool = True,
-    tls_identifier: TLSIdentifierTypes = DEFAULT_TLS_IDENTIFIER,
+    client_identifier: IdentifierArgTypes = DEFAULT_CLIENT_IDENTIFIER,
+    debug: bool = DEFAULT_DEBUG,
+    protocol_racing: bool = DEFAULT_PROTOCOL_RACING,
+    allow_http: bool = DEFAULT_ALLOW_HTTP,
+    stream_id: Optional[int] = None,
     **config,
 ) -> Response:
     """
@@ -80,7 +103,11 @@ def request(
         http2=http2,
         timeout=timeout,
         verify=verify,
-        client_identifier=tls_identifier,
+        client_identifier=client_identifier,
+        debug=debug,
+        protocol_racing=protocol_racing,
+        allow_http=allow_http,
+        stream_id=stream_id,
         **config,
     ) as client:
         return client.request(
@@ -94,6 +121,9 @@ def request(
             auth=auth,
             follow_redirects=follow_redirects,
             timeout=timeout,
+            protocol_racing=protocol_racing,
+            allow_http=allow_http,
+            stream_id=stream_id,
         )
 
 
@@ -105,11 +135,15 @@ def get(
     cookies: CookieTypes = None,
     auth: AuthTypes = None,
     proxy: ProxyTypes = None,
-    http2: ProtocolTypes = DEFAULT_TLS_HTTP2,
+    http2: ProtocolTypes = DEFAULT_HTTP2,
     timeout: TimeoutTypes = DEFAULT_TIMEOUT,
     follow_redirects: bool = DEFAULT_FOLLOW_REDIRECTS,
     verify: bool = True,
-    tls_identifier: TLSIdentifierTypes = DEFAULT_TLS_IDENTIFIER,
+    client_identifier: IdentifierTypes = DEFAULT_CLIENT_IDENTIFIER,
+    debug: bool = DEFAULT_DEBUG,
+    protocol_racing: bool = DEFAULT_PROTOCOL_RACING,
+    allow_http: bool = DEFAULT_ALLOW_HTTP,
+    stream_id: Optional[int] = None,
     **config,
 ) -> Response:
     """
@@ -132,7 +166,11 @@ def get(
         follow_redirects=follow_redirects,
         timeout=timeout,
         verify=verify,
-        tls_identifier=tls_identifier,
+        client_identifier=client_identifier,
+        debug=debug,
+        protocol_racing=protocol_racing,
+        allow_http=allow_http,
+        stream_id=stream_id,
         **config,
     )
 
@@ -145,11 +183,15 @@ def options(
     cookies: CookieTypes = None,
     auth: AuthTypes = None,
     proxy: ProxyTypes = None,
-    http2: ProtocolTypes = DEFAULT_TLS_HTTP2,
+    http2: ProtocolTypes = DEFAULT_HTTP2,
     timeout: TimeoutTypes = DEFAULT_TIMEOUT,
     follow_redirects: bool = DEFAULT_FOLLOW_REDIRECTS,
     verify: bool = True,
-    tls_identifier: TLSIdentifierTypes = DEFAULT_TLS_IDENTIFIER,
+    client_identifier: IdentifierTypes = DEFAULT_CLIENT_IDENTIFIER,
+    debug: bool = DEFAULT_DEBUG,
+    protocol_racing: bool = DEFAULT_PROTOCOL_RACING,
+    allow_http: bool = DEFAULT_ALLOW_HTTP,
+    stream_id: Optional[int] = None,
     **config,
 ) -> Response:
     """
@@ -172,7 +214,11 @@ def options(
         follow_redirects=follow_redirects,
         timeout=timeout,
         verify=verify,
-        tls_identifier=tls_identifier,
+        client_identifier=client_identifier,
+        debug=debug,
+        protocol_racing=protocol_racing,
+        allow_http=allow_http,
+        stream_id=stream_id,
         **config,
     )
 
@@ -185,11 +231,15 @@ def head(
     cookies: CookieTypes = None,
     auth: AuthTypes = None,
     proxy: ProxyTypes = None,
-    http2: ProtocolTypes = DEFAULT_TLS_HTTP2,
+    http2: ProtocolTypes = DEFAULT_HTTP2,
     timeout: TimeoutTypes = DEFAULT_TIMEOUT,
     follow_redirects: bool = DEFAULT_FOLLOW_REDIRECTS,
     verify: bool = True,
-    tls_identifier: TLSIdentifierTypes = DEFAULT_TLS_IDENTIFIER,
+    client_identifier: IdentifierTypes = DEFAULT_CLIENT_IDENTIFIER,
+    debug: bool = DEFAULT_DEBUG,
+    protocol_racing: bool = DEFAULT_PROTOCOL_RACING,
+    allow_http: bool = DEFAULT_ALLOW_HTTP,
+    stream_id: Optional[int] = None,
     **config,
 ) -> Response:
     """
@@ -212,7 +262,11 @@ def head(
         timeout=timeout,
         follow_redirects=follow_redirects,
         verify=verify,
-        tls_identifier=tls_identifier,
+        client_identifier=client_identifier,
+        debug=debug,
+        protocol_racing=protocol_racing,
+        allow_http=allow_http,
+        stream_id=stream_id,
         **config,
     )
 
@@ -220,19 +274,23 @@ def head(
 def post(
     url: URLTypes,
     *,
-    data: RequestData = None,
-    files: RequestFiles = None,
-    json: typing.Any = None,
+    data: Optional[RequestData] = None,
+    files: Optional[RequestFiles] = None,
+    json: Optional[Any] = None,
     params: URLParamTypes = None,
     headers: HeaderTypes = None,
     cookies: CookieTypes = None,
     auth: AuthTypes = None,
     proxy: ProxyTypes = None,
-    http2: ProtocolTypes = DEFAULT_TLS_HTTP2,
+    http2: ProtocolTypes = DEFAULT_HTTP2,
     timeout: TimeoutTypes = DEFAULT_TIMEOUT,
     follow_redirects: bool = DEFAULT_FOLLOW_REDIRECTS,
     verify: bool = True,
-    tls_identifier: TLSIdentifierTypes = DEFAULT_TLS_IDENTIFIER,
+    client_identifier: IdentifierTypes = DEFAULT_CLIENT_IDENTIFIER,
+    debug: bool = DEFAULT_DEBUG,
+    protocol_racing: bool = DEFAULT_PROTOCOL_RACING,
+    allow_http: bool = DEFAULT_ALLOW_HTTP,
+    stream_id: Optional[int] = None,
     **config,
 ) -> Response:
     """
@@ -255,7 +313,11 @@ def post(
         timeout=timeout,
         follow_redirects=follow_redirects,
         verify=verify,
-        tls_identifier=tls_identifier,
+        client_identifier=client_identifier,
+        debug=debug,
+        protocol_racing=protocol_racing,
+        allow_http=allow_http,
+        stream_id=stream_id,
         **config,
     )
 
@@ -263,19 +325,23 @@ def post(
 def put(
     url: URLTypes,
     *,
-    data: RequestData = None,
-    files: RequestFiles = None,
-    json: typing.Any = None,
+    data: Optional[RequestData] = None,
+    files: Optional[RequestFiles] = None,
+    json: Optional[Any] = None,
     params: URLParamTypes = None,
     headers: HeaderTypes = None,
     cookies: CookieTypes = None,
     auth: AuthTypes = None,
     proxy: ProxyTypes = None,
-    http2: ProtocolTypes = DEFAULT_TLS_HTTP2,
+    http2: ProtocolTypes = DEFAULT_HTTP2,
     timeout: TimeoutTypes = DEFAULT_TIMEOUT,
     follow_redirects: bool = DEFAULT_FOLLOW_REDIRECTS,
     verify: bool = True,
-    tls_identifier: TLSIdentifierTypes = DEFAULT_TLS_IDENTIFIER,
+    client_identifier: IdentifierTypes = DEFAULT_CLIENT_IDENTIFIER,
+    debug: bool = DEFAULT_DEBUG,
+    protocol_racing: bool = DEFAULT_PROTOCOL_RACING,
+    allow_http: bool = DEFAULT_ALLOW_HTTP,
+    stream_id: Optional[int] = None,
     **config,
 ) -> Response:
     """
@@ -298,7 +364,11 @@ def put(
         timeout=timeout,
         follow_redirects=follow_redirects,
         verify=verify,
-        tls_identifier=tls_identifier,
+        client_identifier=client_identifier,
+        debug=debug,
+        protocol_racing=protocol_racing,
+        allow_http=allow_http,
+        stream_id=stream_id,
         **config,
     )
 
@@ -306,19 +376,23 @@ def put(
 def patch(
     url: URLTypes,
     *,
-    data: RequestData = None,
-    files: RequestFiles = None,
-    json: typing.Any = None,
+    data: Optional[RequestData] = None,
+    files: Optional[RequestFiles] = None,
+    json: Optional[Any] = None,
     params: URLParamTypes = None,
     headers: HeaderTypes = None,
     cookies: CookieTypes = None,
     auth: AuthTypes = None,
     proxy: ProxyTypes = None,
-    http2: ProtocolTypes = DEFAULT_TLS_HTTP2,
+    http2: ProtocolTypes = DEFAULT_HTTP2,
     timeout: TimeoutTypes = DEFAULT_TIMEOUT,
     follow_redirects: bool = DEFAULT_FOLLOW_REDIRECTS,
     verify: bool = True,
-    tls_identifier: TLSIdentifierTypes = DEFAULT_TLS_IDENTIFIER,
+    client_identifier: IdentifierTypes = DEFAULT_CLIENT_IDENTIFIER,
+    debug: bool = DEFAULT_DEBUG,
+    protocol_racing: bool = DEFAULT_PROTOCOL_RACING,
+    allow_http: bool = DEFAULT_ALLOW_HTTP,
+    stream_id: Optional[int] = None,
     **config,
 ) -> Response:
     """
@@ -341,7 +415,11 @@ def patch(
         timeout=timeout,
         follow_redirects=follow_redirects,
         verify=verify,
-        tls_identifier=tls_identifier,
+        client_identifier=client_identifier,
+        debug=debug,
+        protocol_racing=protocol_racing,
+        allow_http=allow_http,
+        stream_id=stream_id,
         **config,
     )
 
@@ -349,16 +427,20 @@ def patch(
 def delete(
     url: URLTypes,
     *,
-    params: URLParamTypes | None = None,
-    headers: HeaderTypes | None = None,
-    cookies: CookieTypes | None = None,
-    auth: AuthTypes | None = None,
+    params: URLParamTypes = None,
+    headers: HeaderTypes = None,
+    cookies: CookieTypes = None,
+    auth: AuthTypes = None,
     proxy: ProxyTypes = None,
-    http2: ProtocolTypes = DEFAULT_TLS_HTTP2,
+    http2: ProtocolTypes = DEFAULT_HTTP2,
     timeout: TimeoutTypes = DEFAULT_TIMEOUT,
     follow_redirects: bool = DEFAULT_FOLLOW_REDIRECTS,
     verify: bool = True,
-    tls_identifier: TLSIdentifierTypes = DEFAULT_TLS_IDENTIFIER,
+    client_identifier: IdentifierTypes = DEFAULT_CLIENT_IDENTIFIER,
+    debug: bool = DEFAULT_DEBUG,
+    protocol_racing: bool = DEFAULT_PROTOCOL_RACING,
+    allow_http: bool = DEFAULT_ALLOW_HTTP,
+    stream_id: Optional[int] = None,
     **config,
 ) -> Response:
     """
@@ -381,6 +463,10 @@ def delete(
         timeout=timeout,
         follow_redirects=follow_redirects,
         verify=verify,
-        tls_identifier=tls_identifier,
+        client_identifier=client_identifier,
+        debug=debug,
+        protocol_racing=protocol_racing,
+        allow_http=allow_http,
+        stream_id=stream_id,
         **config,
     )

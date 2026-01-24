@@ -3,6 +3,7 @@
 [![GitHub License](https://img.shields.io/github/license/thewebscraping/tls-requests)](https://github.com/thewebscraping/tls-requests/blob/main/LICENSE)
 [![CI](https://github.com/thewebscraping/tls-requests/actions/workflows/ci.yml/badge.svg)](https://github.com/thewebscraping/tls-requests/actions/workflows/ci.yml)
 [![PyPI - Version](https://img.shields.io/pypi/v/wrapper-tls-requests)](https://pypi.org/project/wrapper-tls-requests/)
+[![Sponsor](https://img.shields.io/badge/Sponsor-thewebscraping-pink?logo=github-sponsors&logoColor=white)](https://github.com/sponsors/thewebscraping)
 ![Python Version](https://img.shields.io/badge/Python-3.9%20%7C%203.10%20%7C%203.11%20%7C%203.12-blue?style=flat)
 ![Pre-commit](https://img.shields.io/badge/pre--commit-enabled-brightgreen?logo=pre-commit&logoColor=white)
 
@@ -33,14 +34,35 @@ pip install git+https://github.com/thewebscraping/tls-requests.git
 **Quick Start**
 ---------------
 
-Start using TLS Requests with just a few lines of code:
+Start using TLS Requests with just a few lines of code. It automatically synchronizes headers based on your chosen browser identifier:
 
-```pycon
->>> import tls_requests
->>> r = tls_requests.get("https://httpbin.org/get")
->>> r
+```python
+import tls_requests
+# The library automatically injects matching User-Agent and Sec-CH-UA headers
+r = tls_requests.get("https://httpbin.org/headers", client_identifier="chrome_133")
+r.json()["headers"]["User-Agent"]
+'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/133.0.0.0 Safari/537.36'
+```
+
+Basic automatically rotates for proxies and TLS identifiers:
+
+```python
+import tls_requests
+proxy_rotator = tls_requests.ProxyRotator([
+    "http://user1:pass1@proxy.example.com:8080",
+    "http://user2:pass2@proxy.example.com:8081",
+    "socks5://proxy.example.com:8082",
+    "proxy.example.com:8083",  # defaults to http
+    "http://user:pass@proxy.example.com:8084|1.0|US",  # weight and region support
+])
+r = tls_requests.get(
+    "https://httpbin.org/get",
+    proxy=proxy_rotator,
+    client_identifier=tls_requests.TLSIdentifierRotator()
+)
+r
 <Response [200 OK]>
->>> r.status_code
+r.status_code
 200
 ```
 
@@ -75,10 +97,10 @@ making it easy to scrape data or interact with websites that use sophisticated a
 
 **Example Code:**
 
-```pycon
->>> import tls_requests
->>> r = tls_requests.get('https://www.coingecko.com/')
->>> r
+```python
+import tls_requests
+r = tls_requests.get('https://www.coingecko.com/')
+r
 <Response [200]>
 ```
 
@@ -88,9 +110,10 @@ making it easy to scrape data or interact with websites that use sophisticated a
 ### **Enhanced Capabilities**
 
 *   **Browser-like TLS Fingerprinting**: Enables secure and reliable browser-mimicking connections.
-*   **High-Performance Backend**: Built on a Go-based HTTP backend for speed and efficiency.
+*   **Dynamic Header Synchronization**: Automatically extracts browser versions from `client_identifier` and injects them into `User-Agent` and `sec-ch-ua` headers.
+*   **High-Performance Backend**: Built on a Go-based HTTP backend with **Protocol Racing** (Happy Eyeballs) enabled by default for faster connections.
 *   **Synchronous & Asynchronous Support**: Seamlessly switch between synchronous and asynchronous requests.
-*   **Protocol Support**: Fully compatible with HTTP/1.1 and HTTP/2.
+*   **Protocol Support**: Fully compatible with HTTP/1.1, HTTP/2, and HTTP/3 (Alpha).
 *   **Strict Timeouts**: Reliable timeout management for precise control over request durations.
 
 ### **Additional Features**
@@ -101,6 +124,7 @@ making it easy to scrape data or interact with websites that use sophisticated a
 *   **Content Decoding**: Automatic handling of gzip and brotli-encoded responses.
 *   **Hooks**: Perfect for logging, monitoring, tracing, or pre/post-processing requests and responses.
 *   **Unicode Support**: Effortlessly process Unicode response bodies.
+*   **Advanced TLS Options**: Support for `protocol_racing`, `allow_http` and `stream_id`.
 *   **File Uploads**: Simplified multipart file upload support.
 *   **Proxy Configuration**: Supports Socks5, HTTP, and HTTPS proxies for enhanced privacy.
 

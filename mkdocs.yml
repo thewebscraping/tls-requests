@@ -1,6 +1,6 @@
-site_name: TLS Requests
+site_name: Wrapper TLS Requests
 site_description: A powerful and lightweight Python library for making secure and reliable HTTP/TLS Fingerprint requests.
-site_url: https://github.com/thewebscraping/
+site_url: https://github.com/thewebscraping/tls-requests/
 
 theme:
     name: 'material'
@@ -30,6 +30,7 @@ nav:
         - Authentication: 'advanced/authentication.md'
         - Hooks: 'advanced/hooks.md'
         - Proxies: 'advanced/proxies.md'
+        - Rotators: 'advanced/rotators.md'
     - TLS Client:
         - Install: 'tls/install.md'
         - Wrapper TLS Client: 'tls/index.md'
@@ -42,5 +43,5 @@ markdown_extensions:
       css_class: highlight
   - mkautodoc
 
-extra_css:
-    - css/custom.css
+# extra_css:  # custom CSS removed because file is missing
+#     - css/custom.css

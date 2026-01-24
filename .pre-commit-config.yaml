@@ -1,33 +1,62 @@
-exclude: '^docs.sh/|scripts/'
-default_stages: [pre-commit]
-
-default_language_version:
-  python: python3.10
+# Pre-commit hooks configuration
+# See https://pre-commit.com for more information
 
 repos:
+  # General file checks
   - repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v4.5.0
+    rev: v6.0.0
     hooks:
       - id: trailing-whitespace
       - id: end-of-file-fixer
+      - id: check-yaml
+      - id: check-added-large-files
+        args: [--maxkb=1500]
       - id: check-json
       - id: check-toml
-      - id: check-xml
-      - id: check-yaml
-      - id: debug-statements
-      - id: check-builtin-literals
+      - id: check-merge-conflict
       - id: check-case-conflict
-      - id: check-docstring-first
-      - id: detect-private-key
+      - id: mixed-line-ending
 
-  # run the isort.
-  - repo: https://github.com/PyCQA/isort
-    rev: 5.13.2
+  # Ruff - Fast Python linter and formatter
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.14.13
     hooks:
-      - id: isort
+      # Run the linter
+      - id: ruff
+        args: [--extend-select, I, --fix, --exit-non-zero-on-fix]
+      # Run the formatter
+      - id: ruff-format
+        args: [--exit-non-zero-on-fix]
 
-  # run the flake8.
-  - repo: https://github.com/PyCQA/flake8
-    rev: 7.0.0
+  # Type checking with mypy
+  - repo: https://github.com/pre-commit/mirrors-mypy
+    rev: v1.15.0
     hooks:
-      - id: flake8
+      - id: mypy
+        additional_dependencies:
+          - types-setuptools
+          - idna
+          - orjson
+          - charset-normalizer
+          - chardet
+        args: [--ignore-missing-imports, --config-file=pyproject.toml]
+
+  # Markdown linting (disabled due to duplicate heading issues)
+  # - repo: https://github.com/igorshubovych/markdownlint-cli
+  #   rev: v0.46.0
+  #   hooks:
+  #     - id: markdownlint
+  #       args: [--fix]
+
+# CI configuration
+ci:
+  autofix_commit_msg: |
+    [pre-commit.ci] auto fixes from pre-commit.com hooks
+
+    for more information, see https://pre-commit.ci
+  autofix_prs: true
+  autoupdate_branch: ''
+  autoupdate_commit_msg: '[pre-commit.ci] pre-commit autoupdate'
+  autoupdate_schedule: weekly
+  skip: []
+  submodules: false

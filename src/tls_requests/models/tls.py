@@ -1,25 +1,35 @@
+from __future__ import annotations
+
 import ctypes
+import re
 import uuid
 from dataclasses import asdict, dataclass, field
 from dataclasses import fields as get_fields
-from typing import Any, List, Mapping, Optional, Set, TypeVar, Union
+from typing import Any, Callable, Dict, List, Mapping, Optional, Set, TypeVar, Union
 
-from tls_requests.models.encoders import StreamEncoder
-from tls_requests.models.libraries import TLSLibrary
-from tls_requests.models.status_codes import StatusCodes
-from tls_requests.settings import (DEFAULT_HEADERS, DEFAULT_TIMEOUT,
-                                   DEFAULT_TLS_DEBUG, DEFAULT_TLS_HTTP2,
-                                   DEFAULT_TLS_IDENTIFIER)
-from tls_requests.types import (MethodTypes, TLSCookiesTypes,
-                                TLSIdentifierTypes, TLSSessionId, URLTypes)
-from tls_requests.utils import to_base64, to_bytes, to_json
+from ..settings import (
+    BROWSER_HEADERS,
+    DEFAULT_ALLOW_HTTP,
+    DEFAULT_CLIENT_IDENTIFIER,
+    DEFAULT_DEBUG,
+    DEFAULT_HTTP2,
+    DEFAULT_PROTOCOL_RACING,
+    DEFAULT_TIMEOUT,
+)
+from ..types import CookiesTypes, IdentifierTypes, MethodTypes, SessionId, URLTypes
+from ..utils import to_base64, to_bytes, to_json
+from .encoders import StreamEncoder
+from .libraries import TLSLibrary
+from .status_codes import StatusCodes
 
-__all__ = [
+__all__ = (
     "TLSClient",
     "TLSResponse",
     "TLSConfig",
     "CustomTLSClientConfig",
-]
+    "TLSRequestCookiesConfig",
+)
+
 
 T = TypeVar("T", bound="_BaseConfig")
 
@@ -80,13 +90,13 @@ class TLSClient:
         >>> print(response)
     """
 
-    _library = None
-    _getCookiesFromSession = None
-    _addCookiesToSession = None
-    _destroySession = None
-    _destroyAll = None
-    _request = None
-    _freeMemory = None
+    _library: Optional[Any] = None
+    _getCookiesFromSession: Optional[Callable] = None
+    _addCookiesToSession: Optional[Callable] = None
+    _destroySession: Optional[Callable] = None
+    _destroyAll: Optional[Callable] = None
+    _request: Optional[Callable] = None
+    _freeMemory: Optional[Callable] = None
 
     def __init__(self) -> None:
         if self._library is None:
@@ -106,52 +116,63 @@ class TLSClient:
             setattr(cls, fn_name, getattr(cls._library, name, None))
             fn = getattr(cls, fn_name, None)
             if fn and callable(fn):
-                fn.argtypes = [ctypes.c_char_p]
-                fn.restype = ctypes.c_char_p
+                fn.argtypes = [ctypes.c_char_p]  # type: ignore
+                fn.restype = ctypes.c_char_p  # type: ignore
 
         cls._destroyAll = cls._library.destroyAll
-        cls._destroyAll.restype = ctypes.c_char_p
+        cls._destroyAll.restype = ctypes.c_char_p  # type: ignore
         return cls()
 
     @classmethod
-    def get_cookies(cls, session_id: TLSSessionId, url: str) -> "TLSResponse":
-        response = cls._send(
-            cls._getCookiesFromSession, {"sessionId": session_id, "url": url}
-        )
+    def get_cookies(cls, session_id: SessionId, url: str) -> "TLSResponse":
+        if cls._getCookiesFromSession is None:
+            cls.initialize()
+        response = cls._send(cls._getCookiesFromSession, {"sessionId": session_id, "url": url})  # type: ignore[arg-type]
         return response
 
     @classmethod
-    def add_cookies(cls, session_id: TLSSessionId, payload: dict):
+    def add_cookies(cls, session_id: SessionId, payload: dict):
+        if cls._addCookiesToSession is None:
+            cls.initialize()
         payload["sessionId"] = session_id
         return cls._send(
-            cls._addCookiesToSession,
+            cls._addCookiesToSession,  # type: ignore[arg-type]
             payload,
         )
 
     @classmethod
     def destroy_all(cls) -> bool:
-        response = TLSResponse.from_bytes(cls._destroyAll())
+        if cls._destroyAll is None:
+            cls.initialize()
+        response = TLSResponse.from_bytes(cls._destroyAll())  # type: ignore[misc]
         if response.success:
             return True
         return False
 
     @classmethod
-    def destroy_session(cls, session_id: TLSSessionId) -> bool:
-        response = cls._send(cls._destroySession, {"sessionId": session_id})
+    def destroy_session(cls, session_id: SessionId) -> bool:
+        if cls._destroySession is None:
+            cls.initialize()
+        response = cls._send(cls._destroySession, {"sessionId": session_id})  # type: ignore[arg-type]
         return response.success or False
 
     @classmethod
     def request(cls, payload):
-        return cls._send(cls._request, payload)
+        if cls._request is None:
+            cls.initialize()
+        return cls._send(cls._request, payload)  # type: ignore[arg-type]
 
     @classmethod
     def free_memory(cls, response_id: str) -> None:
-        cls._freeMemory(to_bytes(response_id))
+        if cls._freeMemory is None:
+            cls.initialize()
+        cls._freeMemory(to_bytes(response_id))  # type: ignore[misc]
 
     @classmethod
     def response(cls, raw: bytes) -> "TLSResponse":
         response = TLSResponse.from_bytes(raw)
-        cls.free_memory(response.id)
+        if response.id:
+            cls.free_memory(response.id)
         return response
 
     @classmethod
@@ -162,14 +183,16 @@ class TLSClient:
 
     @classmethod
     async def arequest(cls, payload):
-        return await cls._aread(cls._request, payload)
+        if cls._request is None:
+            cls.initialize()
+        return await cls._aread(cls._request, payload)  # type: ignore[arg-type]
 
     @classmethod
-    def _send(cls, fn: callable, payload: dict):
+    def _send(cls, fn: Callable, payload: dict):
         return cls.response(fn(to_bytes(payload)))
 
     @classmethod
-    async def _aread(cls, fn: callable, payload: dict):
+    async def _aread(cls, fn: Callable, payload: dict):
         return await cls.aresponse(fn(to_bytes(payload)))
 
 
@@ -177,24 +200,34 @@ class TLSClient:
 class _BaseConfig:
     """Base configuration for TLSSession"""
 
+    _extra_config: dict = field(default_factory=dict, init=False, repr=False)
+
     @classmethod
     def model_fields_set(cls) -> Set[str]:
-        return {
-            model_field.name
-            for model_field in get_fields(cls)
-            if not model_field.name.startswith("_")
-        }
+        return {model_field.name for model_field in get_fields(cls) if not model_field.name.startswith("_")}
 
     @classmethod
-    def from_kwargs(cls, **kwargs: Any) -> T:
+    def from_kwargs(cls: type[T], **kwargs: Any) -> T:
         model_fields_set = cls.model_fields_set()
-        return cls(**{k: v for k, v in kwargs.items() if k in model_fields_set and v})
+        known_kwargs = {cls.to_camel_case(k): v for k, v in kwargs.items() if k in model_fields_set}
+        extra_kwargs = {cls.to_camel_case(k): v for k, v in kwargs.items() if k not in model_fields_set}
+        instance = cls(**known_kwargs)
+        instance._extra_config = extra_kwargs
+        return instance
 
     def to_dict(self) -> dict:
-        return {k: v for k, v in asdict(self).items() if not k.startswith("_")}
+        data = asdict(self)
+        if hasattr(self, "_extra_config"):
+            data.update(self._extra_config)
+        return {k: v for k, v in data.items() if not k.startswith("_") and v is not None}
 
     def to_payload(self) -> dict:
         return self.to_dict()
+
+    @classmethod
+    def to_camel_case(cls, name: str) -> str:
+        """Convert a string to camelCase."""
+        return "".join(word.capitalize() if i > 0 else word for i, word in enumerate(name.split("_")))
 
 
 @dataclass
@@ -223,18 +256,19 @@ class TLSResponse(_BaseConfig):
 
     id: Optional[str] = None
     sessionId: Optional[str] = None
-    status: Optional[int] = 0
+    status: int = 0
     target: Optional[str] = None
     body: Optional[str] = None
-    headers: Optional[dict] = field(default_factory=dict)
-    cookies: Optional[dict] = field(default_factory=dict)
-    success: Optional[bool] = False
-    usedProtocol: Optional[str] = "HTTP/1.1"
+    headers: Dict[str, Any] = field(default_factory=dict)
+    cookies: Dict[str, Any] = field(default_factory=dict)
+    success: bool = False
+    usedProtocol: str = "HTTP/1.1"
 
     @classmethod
     def from_bytes(cls, raw: bytes) -> "TLSResponse":
         with StreamEncoder.from_bytes(raw) as stream:
-            return cls.from_kwargs(**to_json(b"".join(stream)))
+            payload = b"".join(stream)
+            return cls.from_kwargs(**to_json(payload))
 
     @property
     def reason(self) -> str:
@@ -341,19 +375,19 @@ class CustomTLSClientConfig(_BaseConfig):
 
     """
 
-    alpnProtocols: List[str] = None
-    alpsProtocols: List[str] = None
-    certCompressionAlgo: str = None
-    connectionFlow: int = None
-    h2Settings: List[str] = None
-    h2SettingsOrder: List[str] = None
-    headerPriority: List[str] = None
-    ja3String: str = None
-    keyShareCurves: List[str] = None
-    priorityFrames: List[str] = None
-    pseudoHeaderOrder: List[str] = None
-    supportedSignatureAlgorithms: List[str] = None
-    supportedVersions: List[str] = None
+    alpnProtocols: Optional[List[str]] = None
+    alpsProtocols: Optional[List[str]] = None
+    certCompressionAlgo: Optional[str] = None
+    connectionFlow: Optional[int] = None
+    h2Settings: Optional[Dict[str, int]] = None
+    h2SettingsOrder: Optional[List[str]] = None
+    headerPriority: Optional[List[str]] = None
+    ja3String: Optional[str] = None
+    keyShareCurves: Optional[List[str]] = None
+    priorityFrames: Optional[List[str]] = None
+    pseudoHeaderOrder: Optional[List[str]] = None
+    supportedSignatureAlgorithms: Optional[List[str]] = None
+    supportedVersions: Optional[List[str]] = None
 
 
 @dataclass
@@ -435,15 +469,18 @@ class TLSConfig(_BaseConfig):
     isByteResponse: bool = True
     isRotatingProxy: bool = False
     proxyUrl: str = ""
-    requestBody: Union[str, bytes, bytearray, None] = None
+    requestBody: Union[str, bytes, bytearray, Optional[None]] = None
     requestCookies: List[TLSRequestCookiesConfig] = field(default_factory=list)
-    requestMethod: MethodTypes = None
+    requestMethod: Optional[MethodTypes] = None
     requestUrl: Optional[str] = None
     sessionId: str = field(default_factory=lambda: str(uuid.uuid4()))
+    streamID: Optional[int] = None
     timeoutSeconds: int = 30
-    tlsClientIdentifier: Optional[TLSIdentifierTypes] = DEFAULT_TLS_IDENTIFIER
-    withDebug: bool = False
+    tlsClientIdentifier: Optional[IdentifierTypes] = DEFAULT_CLIENT_IDENTIFIER
+    withAllowHTTP: bool = DEFAULT_ALLOW_HTTP
+    withDebug: bool = DEFAULT_DEBUG
     withDefaultCookieJar: bool = False
+    withProtocolRacing: bool = DEFAULT_PROTOCOL_RACING
     withRandomTLSExtensionOrder: bool = True
     withoutCookieJar: bool = False
 
@@ -457,99 +494,169 @@ class TLSConfig(_BaseConfig):
         if self.requestBody and isinstance(self.requestBody, (bytes, bytearray)):
             self.isByteRequest = True
             self.requestBody = to_base64(self.requestBody)
+        elif self.requestBody:
+            self.isByteRequest = False
         else:
             self.isByteRequest = False
             self.requestBody = None
 
         self.timeoutSeconds = (
-            int(self.timeoutSeconds)
-            if isinstance(self.timeoutSeconds, (float, int))
-            else DEFAULT_TIMEOUT
+            int(self.timeoutSeconds) if isinstance(self.timeoutSeconds, (float, int)) else DEFAULT_TIMEOUT
         )
-        return asdict(self)
+        return super().to_dict()
 
     def copy_with(
         self,
-        session_id: str = None,
-        headers: Mapping[str, str] = None,
-        cookies: TLSCookiesTypes = None,
-        method: MethodTypes = None,
-        url: URLTypes = None,
-        body: Union[str, bytes, bytearray] = None,
-        is_byte_request: bool = None,
-        proxy: str = None,
-        http2: bool = None,
-        timeout: Union[float, int] = None,
-        verify: bool = None,
-        tls_identifier: Optional[TLSIdentifierTypes] = None,
-        tls_debug: bool = None,
-        **kwargs,
+        session_id: Optional[str] = None,
+        headers: Optional[Mapping[str, str]] = None,
+        cookies: Optional[CookiesTypes] = None,
+        method: Optional[MethodTypes] = None,
+        url: Optional[URLTypes] = None,
+        body: Optional[Union[str, bytes, bytearray]] = None,
+        is_byte_request: Optional[bool] = None,
+        proxy: Optional[str] = None,
+        http2: Optional[bool] = None,
+        timeout: Optional[Union[float, int]] = None,
+        verify: Optional[bool] = None,
+        client_identifier: Optional[IdentifierTypes] = None,
+        debug: Optional[bool] = None,
+        protocol_racing: Optional[bool] = None,
+        allow_http: Optional[bool] = None,
+        stream_id: Optional[int] = None,
+        **kwargs: Any,
     ) -> "TLSConfig":
         """Creates a new `TLSConfig` object with updated properties."""
 
-        kwargs.update(
-            dict(
-                sessionId=session_id,
-                headers=headers,
-                requestCookies=cookies,
-                requestMethod=method,
-                requestUrl=url,
-                requestBody=body,
-                isByteRequest=is_byte_request,
-                proxyUrl=proxy,
-                forceHttp1=not http2,
-                timeoutSeconds=timeout,
-                insecureSkipVerify=not verify,
-                tlsClientIdentifier=tls_identifier,
-                withDebug=tls_debug,
-            )
-        )
-        current_kwargs = asdict(self)
-        for k, v in current_kwargs.items():
-            if kwargs.get(k) is not None:
-                current_kwargs[k] = kwargs[k]
+        mapping = {
+            "sessionId": session_id,
+            "headers": headers,
+            "requestCookies": cookies,
+            "requestMethod": method,
+            "requestUrl": url,
+            "requestBody": body,
+            "isByteRequest": is_byte_request,
+            "proxyUrl": proxy,
+            "timeoutSeconds": timeout,
+            "insecureSkipVerify": None if verify is None else not verify,
+            "tlsClientIdentifier": client_identifier,
+            "withDebug": debug,
+            "withProtocolRacing": protocol_racing,
+            "withAllowHTTP": allow_http,
+            "streamID": stream_id,
+        }
+        if http2 is not None:
+            mapping["forceHttp1"] = not http2
 
-        return self.__class__(**current_kwargs)
+        # Filter out None values to avoid overwriting existing config with defaults
+        filtered_mapping = {k: v for k, v in mapping.items() if v is not None}
+        kwargs.update(filtered_mapping)
+
+        current_kwargs = asdict(self)
+        if hasattr(self, "_extra_config"):
+            current_kwargs.update(self._extra_config)
+
+        for k, v in kwargs.items():
+            current_kwargs[k] = v
+
+        return super().from_kwargs(**current_kwargs)
 
     @classmethod
     def from_kwargs(
         cls,
-        session_id: str = None,
-        headers: Mapping[str, str] = None,
-        cookies: TLSCookiesTypes = None,
-        method: MethodTypes = None,
-        url: URLTypes = None,
-        body: Union[str, bytes, bytearray] = None,
+        session_id: Optional[str] = None,
+        headers: Optional[Mapping[str, str]] = None,
+        cookies: Optional[CookiesTypes] = None,
+        method: Optional[MethodTypes] = None,
+        url: Optional[URLTypes] = None,
+        body: Optional[Union[str, bytes, bytearray]] = None,
         is_byte_request: bool = False,
-        proxy: str = None,
-        http2: bool = DEFAULT_TLS_HTTP2,
+        proxy: Optional[str] = None,
+        http2: Optional[Union[bool, str]] = DEFAULT_HTTP2,
         timeout: Union[float, int] = DEFAULT_TIMEOUT,
         verify: bool = True,
-        tls_identifier: Optional[TLSIdentifierTypes] = DEFAULT_TLS_IDENTIFIER,
-        tls_debug: bool = DEFAULT_TLS_DEBUG,
+        client_identifier: Optional[IdentifierTypes] = None,
+        debug: bool = DEFAULT_DEBUG,
+        protocol_racing: bool = DEFAULT_PROTOCOL_RACING,
+        allow_http: bool = DEFAULT_ALLOW_HTTP,
+        stream_id: Optional[int] = None,
         **kwargs: Any,
     ) -> "TLSConfig":
         """Creates a `TLSConfig` instance from keyword arguments."""
 
-        kwargs.update(
-            dict(
-                sessionId=session_id,
-                headers=dict(headers) if headers else DEFAULT_HEADERS,
-                requestCookies=cookies or [],
-                requestMethod=method,
-                requestUrl=url,
-                requestBody=body,
-                isByteRequest=is_byte_request,
-                proxyUrl=proxy,
-                forceHttp1=bool(not http2),
-                timeoutSeconds=(
-                    int(timeout)
-                    if isinstance(timeout, (float, int))
-                    else DEFAULT_TIMEOUT
-                ),
-                insecureSkipVerify=not verify,
-                tlsClientIdentifier=tls_identifier,
-                withDebug=tls_debug,
-            )
-        )
+        # 1. Handle Snake Case Aliases
+        if client_identifier is not None:
+            kwargs.setdefault("tlsClientIdentifier", client_identifier)
+        if debug is not None:
+            kwargs.setdefault("withDebug", debug)
+        if protocol_racing is not None:
+            kwargs.setdefault("withProtocolRacing", protocol_racing)
+        if allow_http is not None:
+            kwargs.setdefault("withAllowHTTP", allow_http)
+        if stream_id is not None:
+            kwargs.setdefault("streamID", stream_id)
+
+        # 2. Resolve Identifier (Prioritize explicit arg, then kwargs, then default)
+        identifier = client_identifier or kwargs.get("tlsClientIdentifier") or DEFAULT_CLIENT_IDENTIFIER
+        identifier_str = str(identifier).lower()
+
+        # 3. Dynamic Header Mapping based on identifier
+        # Resolve Headers (Prioritize explicit arg, then kwargs)
+        resolved_headers = headers if headers is not None else kwargs.get("headers")
+
+        injected_headers = {}
+        if not resolved_headers:  # Only inject if headers are missing or empty
+            for browser, browser_headers in BROWSER_HEADERS.items():
+                if browser in identifier_str:
+                    injected_headers = browser_headers.copy()
+
+                    # 4. Dynamic Version Replacement
+                    if browser == "chrome":
+                        match = re.search(r"chrome_(\d+)", identifier_str)
+                        if match:
+                            version = match.group(1)
+                            ua = injected_headers.get("user-agent", "")
+                            injected_headers["user-agent"] = re.sub(r"Chrome/\d+", f"Chrome/{version}", ua)
+                            if "sec-ch-ua" in injected_headers:
+                                val = injected_headers["sec-ch-ua"]
+                                injected_headers["sec-ch-ua"] = val.replace("133", version)
+                    elif browser == "firefox":
+                        match = re.search(r"firefox_(\d+)", identifier_str)
+                        if match:
+                            version = match.group(1)
+                            ua = injected_headers.get("user-agent", "")
+                            # Firefox has version in two places: rv:XX and Firefox/XX
+                            ua = re.sub(r"rv:\d+", f"rv:{version}", ua)
+                            injected_headers["user-agent"] = re.sub(r"Firefox/\d+", f"Firefox/{version}", ua)
+                    elif browser == "safari":
+                        match = re.search(r"safari_ios_(\d+)", identifier_str) or re.search(
+                            r"safari_(\d+)", identifier_str
+                        )
+                        if match:
+                            version = match.group(1)
+                            ua = injected_headers.get("user-agent", "")
+                            injected_headers["user-agent"] = re.sub(r"Version/\d+", f"Version/{version}", ua)
+                    break
+
+        defaults = {
+            "sessionId": session_id,
+            "headers": dict(resolved_headers) if resolved_headers else injected_headers,
+            "requestCookies": cookies or [],
+            "requestMethod": method,
+            "requestUrl": url,
+            "requestBody": body,
+            "isByteRequest": is_byte_request,
+            "proxyUrl": proxy,
+            "forceHttp1": bool(not http2),
+            "timeoutSeconds": (int(timeout) if isinstance(timeout, (float, int)) else DEFAULT_TIMEOUT),
+            "insecureSkipVerify": not verify,
+            "tlsClientIdentifier": identifier,
+            "withDebug": debug,
+            "withProtocolRacing": protocol_racing,
+            "withAllowHTTP": allow_http,
+            "streamID": stream_id,
+        }
+
+        for key, value in defaults.items():
+            kwargs.setdefault(key, value)
+
         return super().from_kwargs(**kwargs)
