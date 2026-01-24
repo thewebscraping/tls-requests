@@ -341,10 +341,30 @@ class URL:
         if not isinstance(url, str):
             raise URLError("Invalid URL: %s" % url)
 
+        # Pre-parsing repair for raw IPv6 addresses
+        url_to_parse = url.lstrip()
+        if ":" in url_to_parse and "://" not in url_to_parse:
+            # Check if it's a naked IPv6 (contains multiple colons)
+            potential_host = url_to_parse.split("/", 1)[0].split("?", 1)[0].split("#", 1)[0]
+            if potential_host.count(":") > 1 and not (potential_host.startswith("[") and "]" in potential_host):
+                try:
+                    # Validate if it's actually an IPv6 address
+                    ipaddress.IPv6Address(potential_host.split("]", 1)[0])
+                    url_to_parse = url_to_parse.replace(potential_host, f"[{potential_host}]", 1)
+                except ValueError:
+                    pass
+
         for attr in self.__attrs__:
             setattr(self, attr, None)
 
-        parsed = urlparse(url.lstrip())
+        try:
+            parsed = urlparse(url_to_parse)
+            # For older Python versions where urlparse is lenient,
+            # validate that bracketed netlocs have a valid hostname (IPv6).
+            if parsed.netloc and "[" in parsed.netloc and not parsed.hostname:
+                raise ValueError("Invalid bracketed host")
+        except (ValueError, AttributeError) as e:
+            raise URLError("Invalid URL: %s" % url) from e
 
         self.auth = parsed.username, parsed.password
         self.scheme = parsed.scheme
