@@ -1,6 +1,19 @@
 Release History
 ================
 
+1.2.3 (2026-01-24)
+------------------
+**Improvements:**
+
+- **Enhanced IPv6 Support**: Implemented automatic repair for naked IPv6 addresses (e.g., `2001:db8::1` -> `[2001:db8::1]`) and strict bracket validation.
+- **Robust URL Handling**: Added default `http://` scheme for schemeless URLs and improved component-based building logic to prevent crashes.
+- **Type Safety**: Resolved Mypy strict type inconsistencies and added comprehensive test coverage for IPv6 edge cases.
+
+**Bugfixes:**
+
+- **Python 3.9 Compatibility**: Fixed `RuntimeError: There is no current event loop` during rotator initialization by implementing lazy asyncio lock loading.
+- **Redirect Logic**: Fixed `Headers.__getitem__` to correctly raise `KeyError` for missing keys, ensuring compatibility with standard redirect handling.
+
 1.2.2 (2026-01-21)
 ------------------
 **Improvements:**
