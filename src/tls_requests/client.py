@@ -338,6 +338,9 @@ class BaseClient:
     ) -> Request:
         """Build Request instance"""
 
+        # Remove keys in kwargs that conflict with explicit args
+        safe_kwargs = self._rebuild_request_kwargs(**kwargs)
+
         return Request(
             method,
             url,
@@ -352,7 +355,7 @@ class BaseClient:
             protocol_racing=protocol_racing if protocol_racing is not None else self.protocol_racing,
             allow_http=allow_http if allow_http is not None else self.allow_http,
             stream_id=stream_id if stream_id is not None else self.stream_id,
-            **kwargs,
+            **safe_kwargs,
         )
 
     def build_hook_request(self, request: Request, *args, **kwargs) -> Union[Request, Any]:
@@ -370,6 +373,24 @@ class BaseClient:
                 if callable(hook):
                     return hook(response)
         return None
+
+    def _rebuild_request_kwargs(self, **kwargs) -> dict[str, Any]:
+        explicit_keys = {
+            "method",
+            "url",
+            "data",
+            "files",
+            "json",
+            "params",
+            "headers",
+            "cookies",
+            "proxy",
+            "timeout",
+            "protocol_racing",
+            "allow_http",
+            "stream_id",
+        }
+        return {k: v for k, v in kwargs.items() if k not in explicit_keys}
 
     def _rebuild_hooks(self, hooks: HookTypes):
         if isinstance(hooks, dict):
@@ -909,6 +930,7 @@ class AsyncClient(BaseClient):
         stream_id: Optional[int] = None,
         **kwargs,
     ) -> Request:
+        safe_kwargs = self._rebuild_request_kwargs(**kwargs)
         headers = await self.aprepare_headers(headers)
         proxy = await self.aprepare_proxy(self.proxy)
         return Request(
@@ -925,7 +947,7 @@ class AsyncClient(BaseClient):
             protocol_racing=protocol_racing if protocol_racing is not None else self.protocol_racing,
             allow_http=allow_http if allow_http is not None else self.allow_http,
             stream_id=stream_id if stream_id is not None else self.stream_id,
-            **kwargs,
+            **safe_kwargs,
         )
 
     async def request(

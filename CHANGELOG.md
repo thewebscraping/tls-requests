@@ -1,6 +1,12 @@
 Release History
 ================
 
+1.2.4 (2026-01-25)
+------------------
+**Bugfixes:**
+
+- **Custom Configuration Support**: Fixed an issue where custom request parameters (e.g., `headerOrder`, `ja3String`, `h2Settings`) were silently ignored by `build_request` logic. This ensures advanced TLS fingerprinting options are correctly passed to the backend.
+
 1.2.3 (2026-01-24)
 ------------------
 **Improvements:**
